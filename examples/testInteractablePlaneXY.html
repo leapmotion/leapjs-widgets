@@ -1,0 +1,105 @@
+<html>
+<head>
+
+  <script src="//cdnjs.cloudflare.com/ajax/libs/three.js/r69/three.js"></script>
+  <script src="//js.leapmotion.com/leap-0.6.4.js"></script>
+  <script src="js/leap-plugins-0.1.11pre.js"></script>
+
+  <script src="../build/leap-widgets-0.1.0.js"></script>
+
+  <script src="js/OrbitControls.js"></script>
+  <style>
+    body {
+      margin: 0;
+    }
+    canvas.leap-boneHAnd{
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+
+</head>
+<body>
+
+<p>
+  Todo - set up the following test cases:
+</p>
+<ul>
+  <li>Plane</li>
+  <li>Angled Plane</li>
+  <li>Parented Plane</li>
+  <li>Parented Angled Plane</li>
+  <li>Discs</li>
+  <li>Scaled Plane</li>
+  <li>Stress test</li>
+</ul>
+
+<h3>
+  Notes on docs:
+</h3>
+<p>
+  We work on meters, to have standard border width, etc.
+</p>
+
+</body>
+
+<script>
+
+  // Set up plugins
+
+  Leap.loop({background: true})
+    .use('transform', {
+      vr: 'desktop' // Switch to meters.
+    })
+    .use('boneHand', {
+      targetEl: document.body,
+      jointColor: new THREE.Color(0xffffff),
+      rendererOps: {antialias: true}
+    })
+    .use('proximity');
+
+
+  // Set up scene
+
+  var scene = Leap.loopController.plugins.boneHand.scene;
+  var camera = Leap.loopController.plugins.boneHand.camera;
+  var renderer = Leap.loopController.plugins.boneHand.renderer;
+  camera.position.set( 0, 0.3, 0.6);
+
+  var controls = new THREE.OrbitControls( camera );
+
+  var axisHelper = new THREE.AxisHelper( 0.1 );
+  scene.add( axisHelper );
+
+
+  var planeGeo = new THREE.PlaneGeometry(0.1, 0.2);
+  var material = new THREE.MeshPhongMaterial({side: THREE.DoubleSide});
+  var planeMesh = new THREE.Mesh(planeGeo, material);
+  planeMesh.position.setX(0.05);
+  planeMesh.position.setY(0.1);
+  planeMesh.name = "planeMesh";
+
+  longThrow = 0.05;
+  var base = new THREE.Mesh(new THREE.BoxGeometry(0.1, longThrow, longThrow), new THREE.MeshPhongMaterial({color: 0x222222}));
+//  base.position.set(0.05, -0.05, -0.1);
+  base.position.set(0.05, 0.05, -0.1);
+  base.rotateY(Math.PI / 4);
+
+  planeMesh.position.set(
+    0,
+    planeMesh.geometry.parameters.height / 2 - longThrow / 2,
+    longThrow / 2 + 0.0002
+  );
+  base.add(planeMesh);
+
+  scene.add(base);
+
+  var plane = new InteractablePlane(planeMesh, Leap.loopController, {moveZ: false});
+
+
+</script>
+
+</html>
