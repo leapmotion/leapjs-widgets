@@ -11,7 +11,7 @@
 // there's very nothing in this class which cares if it is a box or a plane.
 
 (function() {
-
+  'use strict';
 
 window.InteractablePlane = function(planeMesh, controller, options){
   this.options = options || {};
@@ -23,6 +23,11 @@ window.InteractablePlane = function(planeMesh, controller, options){
   this.options.highlight  !== undefined|| (this.options.highlight = true); // this can be configured through this.highlightMesh
 
   this.mesh = planeMesh;
+
+  if (!(controller instanceof Leap.Controller)) {
+    throw "No Controller Given"
+  }
+
   this.controller = controller;
   this.lastPosition = null;
 
