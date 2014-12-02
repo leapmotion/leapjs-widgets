@@ -5,20 +5,36 @@
 // are there any potential cases where such a thing would be bad?
 // - if the base shape had to be rotated to appear correct
 // it would be nice to not have to wrap a button, just to rotate it.
+// todo - dispatch click event
+var PushButton = function(interactablePlane, options){
+  'use strict';
 
-var PushButton = function(interactablePlane){
   this.plane = interactablePlane;
   this.plane.returnSpringK = this.plane.mass / 25;
   this.plane.options.moveX = false;
   this.plane.options.moveY = false;
   this.plane.options.moveZ = true;
 
+  this.options = options || (options = {});
+
+  // A distinct "Pressed in/active" state.
+  this.options.locking  !== undefined || (this.options.locking = true);
+
+  // Todo - these should be a percentage of the button size, perhaps.
   this.longThrow  = -0.05;
   this.shortThrow = -0.03;
 
   this.pressed = false;
   this.canChangeState = true;
   this.plane.movementConstraints.z = this.releasedConstraint.bind(this);
+
+  if (this.options.locking){
+    this.bindLocking();
+  }
+
+};
+
+PushButton.prototype.bindLocking = function(){
 
   this.on('press', function(){
     this.pressed = true;

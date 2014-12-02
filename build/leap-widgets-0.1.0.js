@@ -11,7 +11,7 @@
 // there's very nothing in this class which cares if it is a box or a plane.
 
 (function() {
-
+  'use strict';
 
 window.InteractablePlane = function(planeMesh, controller, options){
   this.options = options || {};
@@ -23,6 +23,11 @@ window.InteractablePlane = function(planeMesh, controller, options){
   this.options.highlight  !== undefined|| (this.options.highlight = true); // this can be configured through this.highlightMesh
 
   this.mesh = planeMesh;
+
+  if (!(controller instanceof Leap.Controller)) {
+    throw "No Controller Given"
+  }
+
   this.controller = controller;
   this.lastPosition = null;
 
@@ -640,20 +645,37 @@ Leap._.extend(InteractablePlane.prototype, Leap.EventEmitter.prototype);
 // are there any potential cases where such a thing would be bad?
 // - if the base shape had to be rotated to appear correct
 // it would be nice to not have to wrap a button, just to rotate it.
+// todo - add locking option
+// todo - dispatch click event
+var PushButton = function(interactablePlane, options){
+  'use strict';
 
-var PushButton = function(interactablePlane){
   this.plane = interactablePlane;
   this.plane.returnSpringK = this.plane.mass / 25;
   this.plane.options.moveX = false;
   this.plane.options.moveY = false;
   this.plane.options.moveZ = true;
 
+  this.options = options || (options = {});
+
+  // A distinct "Pressed in/active" state.
+  this.options.locking  !== undefined || (this.options.locking = true);
+
+  // Todo - these should be a percentage of the button size, perhaps.
   this.longThrow  = -0.05;
   this.shortThrow = -0.03;
 
   this.pressed = false;
   this.canChangeState = true;
   this.plane.movementConstraints.z = this.releasedConstraint.bind(this);
+
+  if (this.options.locking){
+    this.bindLocking();
+  }
+
+};
+
+PushButton.prototype.bindLocking = function(){
 
   this.on('press', function(){
     this.pressed = true;
@@ -1159,6 +1181,7 @@ Leap.plugin('proximity', function(scope){
 
 
 (function() {
+  'use strict';
 
 // Returns the positions of all the corners of the box
 // Uses CSS ordering conventions: CW from TL.  First front face corners, then back.

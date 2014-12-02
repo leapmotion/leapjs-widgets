@@ -2,6 +2,7 @@
 
 
 (function() {
+  'use strict';
 
 // Returns the positions of all the corners of the box
 // Uses CSS ordering conventions: CW from TL.  First front face corners, then back.
