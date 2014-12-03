@@ -40,7 +40,6 @@ PushButton.prototype.bindLocking = function(){
     this.pressed = true;
 
     this.plane.movementConstraints.z = this.pressedConstraint.bind(this);
-    this.plane.mesh.material.color.setHex(0xccccff);
 
   }.bind(this));
 
@@ -48,7 +47,6 @@ PushButton.prototype.bindLocking = function(){
     this.pressed = false;
 
     this.plane.movementConstraints.z = this.releasedConstraint.bind(this);
-    this.plane.mesh.material.color.setHex(0xeeeeee);
 
   }.bind(this));
 
@@ -68,7 +66,7 @@ PushButton.prototype.releasedConstraint = function(z){
   if (z < origZ + this.longThrow){
     if (!this.pressed && this.canChangeState){
       this.canChangeState = false;
-      this.emit('press');
+      this.emit('press', this.plane.mesh);
     }
     return origZ + this.longThrow;
   }
@@ -88,7 +86,7 @@ PushButton.prototype.pressedConstraint = function(z){
   if (z < origZ + this.longThrow){
     if (this.pressed && this.canRelease) {
       this.canRelease = false;
-      this.emit('release');
+      this.emit('release', this.plane.mesh);
     }
     return origZ + this.longThrow;
   }

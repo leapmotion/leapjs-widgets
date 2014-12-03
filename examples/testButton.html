@@ -89,8 +89,18 @@
 
 
   var button = new PushButton(
+
     new InteractablePlane(buttonMesh, Leap.loopController)
-  );
+
+  ).on('press', function(mesh){
+
+    mesh.material.color.setHex(0xccccff);
+
+  }).on('release', function(mesh){
+
+    mesh.material.color.setHex(0xeeeeee);
+
+  });
 
 
   var longThrow = -0.05;
@@ -116,15 +126,24 @@
   buttonMesh = new THREE.Mesh(circleGeo, material.clone());
   buttonMesh.name = "round button";
 
-  buttonMesh.position.set(-0.12, 0.05, -0.1);
+  buttonMesh.position.set(-0.12, 0.1, -0.1);
   scene.add(buttonMesh);
 
   var button = new PushButton(
     // for now, constructing with moveX and moveY turned off so that doesn't try and watch for XY intersections,
     // which won't work for circles.
     // todo - have a setter for moveX and moveY, so that proximities can be turned on and off.
+    // Note that we have to bind press and release effects to each individual button. This is a long way from CSS rules still.
     new InteractablePlane(buttonMesh, Leap.loopController, {moveX: false, moveY: false})
-  );
+  ).on('press', function(mesh){
+
+    mesh.material.color.setHex(0xccccff);
+
+  }).on('release', function(mesh){
+
+    mesh.material.color.setHex(0xeeeeee);
+
+  });
   
 
 
