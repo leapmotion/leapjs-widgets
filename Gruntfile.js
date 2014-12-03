@@ -47,7 +47,7 @@ module.exports = function(grunt){
         options: {
           banner: banner
         },
-        src: [filename + '.js', filename + '.min.js']
+        src: ['./build/' + filename + '.js', './build/' + filename + '.min.js']
       }
     },
     // run with `grunt watch` or `grunt test watch`
