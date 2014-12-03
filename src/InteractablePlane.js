@@ -28,6 +28,10 @@ window.InteractablePlane = function(planeMesh, controller, options){
     throw "No Controller Given"
   }
 
+  if (!controller.plugins.proximity){
+    controller.use('proximity');
+  }
+
   this.controller = controller;
   this.lastPosition = null;
 
