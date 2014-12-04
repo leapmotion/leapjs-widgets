@@ -85,6 +85,8 @@ window.InteractablePlane = function(planeMesh, controller, options){
 
   if (this.options.highlight) this.bindHighlight();
 
+  this.controller.on('handLost', this.cleanupHandData.bind(this));
+
 };
 
 window.InteractablePlane.prototype = {
@@ -204,6 +206,17 @@ window.InteractablePlane.prototype = {
 
 
     return newPosition;
+  },
+
+  cleanupHandData: function(hand){
+    var key;
+
+    for (var i = 0; i < 5; i++){
+      key = hand.id + '-' + i;
+      delete this.intersections[key];
+      delete this.previousOverlap[key];
+    }
+
   },
 
   // Takes each of five finger tips
