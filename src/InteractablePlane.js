@@ -269,14 +269,12 @@ window.InteractablePlane.prototype = {
     for (var i = 0; i < hands.length; i++) {
       hand = hands[i];
 
-      for (var j = 0; j < 5; j++) {
-        finger = hand.fingers[j];
+      var points = this.interactiveJoints(hand);
+      for (var j = 0; j < points.length; j++) {
         key = hand.id + "-" + j;
 
         overlapPoint = this.mesh.pointOverlap(
-          (new THREE.Vector3).fromArray(
-            finger.tipPosition
-          ),
+          (new THREE.Vector3).fromArray(points[j]),
           inverseMatrix
         );
 
@@ -625,7 +623,7 @@ window.InteractablePlane.prototype = {
     }.bind(this));
   },
 
-  // Returns coordinates for the last two bones of every finger
+  // Returns coordinates for the last two bones of every finger, for XY intersection
   // Format: An array of tuples of ends
   // Order matters for our own use in this class
   // returns a collection of lines to be tested against
@@ -654,6 +652,30 @@ window.InteractablePlane.prototype = {
           (new THREE.Vector3).fromArray(finger.distal.nextJoint),
           (new THREE.Vector3).fromArray(finger.distal.prevJoint)
         ]
+      );
+
+    }
+
+    return out;
+  },
+
+  // Returns the position in world space of every joint which should be able to move a plane in Z.
+  interactiveJoints: function(hand){
+    var finger, out = [];
+
+    for (var i = 0; i < 5; i++) {
+      finger = hand.fingers[i];
+
+      if (i > 0) { // no thumb proximal
+        out.push(
+          finger.mcpPosition
+        );
+      }
+
+      out.push(
+        finger.pipPosition,
+        finger.dipPosition,
+        finger.tipPosition
       );
 
     }
