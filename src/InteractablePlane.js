@@ -61,6 +61,9 @@ window.InteractablePlane = function(planeMesh, controller, options){
   this.density = 1;
   this.mass = this.mesh.geometry.area() * this.density;
   this.k = this.mass;
+  this.hoverBounds = [0, 0.32]; // react to hover within 3cm. We incude a negative number in case the hands push throuhg?
+
+  this.isHovered = null;
 
   // Spring constant of a restoring force
   this.returnSpringK = null;
@@ -260,7 +263,10 @@ window.InteractablePlane.prototype = {
         }
 
         // Don't allow changing sign, only allow setting sign/value, or unsetting/nulling it
-        if ( !overlap || !this.previousOverlap[key] )this.previousOverlap[key] = overlap;
+        if ( !overlap || !this.previousOverlap[key] ||
+             (overlap * this.previousOverlap[key] > 0) // We have previousOverlap set to the most recent same-sign value.
+             // This is used for hover, but conveniently prevents de-hover on what would be negative values.
+        ) this.previousOverlap[key] = overlap;
 
       }
 
@@ -460,9 +466,52 @@ window.InteractablePlane.prototype = {
 
     }
 
-
     // note - include moveZ here when implemented.
     if ( moveX || moveY || moveZ ) this.emit( 'travel', this, this.mesh );
+
+    if (this.hoverBounds) this.emitHoverEvents();
+  },
+
+  // Takes the previousOverlap calculated earlier in this frame.
+  // If any within range, emits an event.
+  // note - could also emit an event on that fingertip?
+  emitHoverEvents: function(){
+
+    var overlap, isHovered;
+
+    for (var key in this.previousOverlap){
+
+      overlap = this.previousOverlap[key];
+
+      if ( overlap > this.hoverBounds[0] && overlap < this.hoverBounds[1] ) {
+
+        isHovered = true;
+        break;
+
+      }
+
+    }
+
+    if ( isHovered && !this.isHovered ){
+      this.isHovered = isHovered;
+      this.emit('hover', this.mesh)
+    }
+
+    if ( !isHovered && this.isHovered ){
+      this.isHovered = isHovered;
+      this.emit('hoverOut', this.mesh)
+    }
+
+  },
+
+  hover: function(handlerIn, handlerOut){
+
+    this.on('hover', handlerIn);
+
+    if (handlerOut){
+      this.on('hoverOut', handlerOut);
+    }
+
   },
 
   bindResize: function(){
