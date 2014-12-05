@@ -1,3 +1,11 @@
+/*!                                                              
+ * LeapJS Widgets v0.1.0                                          
+ * http://github.com/leapmotion/leapjs-widgets/                                
+ *                                                                             
+ * Copyright 2013 LeapMotion, Inc. and other contributors                      
+ * Released under the Apache-2.0 license                                       
+ * http://github.com/leapmotion/leapjs-widgets/blob/master/LICENSE             
+ */
 // This is a 3d box, or 2d immersed surface
 // This takes in a Leap Controller and is added to a scene, or
 // Would be great to use RequireJS, but that's not set up for this project currently.
@@ -61,10 +69,14 @@ window.InteractablePlane = function(planeMesh, controller, options){
   this.density = 1;
   this.mass = this.mesh.geometry.area() * this.density;
   this.k = this.mass;
+  this.hoverBounds = [0, 0.32]; // react to hover within 3cm. We incude a negative number in case the hands push throuhg?
+
+  this.isHovered = null;
 
   // Spring constant of a restoring force
   this.returnSpringK = null;
   this.force = new THREE.Vector3; // instantaneous force on a object.
+  this.springs = [];
 
   this.lastPosition = new THREE.Vector3;
   this.originalPosition = new THREE.Vector3;
@@ -84,6 +96,8 @@ window.InteractablePlane = function(planeMesh, controller, options){
   this.controller.on('frame', this.updatePosition.bind(this));
 
   if (this.options.highlight) this.bindHighlight();
+
+  this.controller.on('handLost', this.cleanupHandData.bind(this));
 
 };
 
@@ -206,6 +220,44 @@ window.InteractablePlane.prototype = {
     return newPosition;
   },
 
+  // Adds a spring
+  addSpring: function(relativePosition, springConstant){
+
+    var spring = {
+      position: relativePosition,
+      k: springConstant
+    };
+
+    this.springs.push(spring);
+
+    return spring;
+  },
+
+  removeSpring: function(spring) {
+
+    for (var i = 0; i < this.springs.length; i++){
+
+      if (this.springs[i] = spring){
+
+        this.springs.splice(i,1);
+
+      }
+
+    }
+
+  },
+
+  cleanupHandData: function(hand){
+    var key;
+
+    for (var i = 0; i < 5; i++){
+      key = hand.id + '-' + i;
+      delete this.intersections[key];
+      delete this.previousOverlap[key];
+    }
+
+  },
+
   // Takes each of five finger tips
   // stores which side they are on, if any
   // If a finger tip moves through the mesh, moves the mesh accordingly
@@ -247,7 +299,10 @@ window.InteractablePlane.prototype = {
         }
 
         // Don't allow changing sign, only allow setting sign/value, or unsetting/nulling it
-        if ( !overlap || !this.previousOverlap[key] )this.previousOverlap[key] = overlap;
+        if ( !overlap || !this.previousOverlap[key] ||
+             (overlap * this.previousOverlap[key] > 0) // We have previousOverlap set to the most recent same-sign value.
+             // This is used for hover, but conveniently prevents de-hover on what would be negative values.
+        ) this.previousOverlap[key] = overlap;
 
       }
 
@@ -264,6 +319,17 @@ window.InteractablePlane.prototype = {
       this.force.add(
         springDisplacement.multiplyScalar( - this.returnSpringK )
       )
+
+    }
+
+    var spring, springDisplacement;
+    for (var i = 0; i < this.springs.length; i++){
+      spring = this.springs[i];
+      springDisplacement = this.mesh.position.clone().sub(spring.position);
+
+      this.force.add(
+        springDisplacement.multiplyScalar( - spring.k )
+      );
 
     }
 
@@ -447,9 +513,52 @@ window.InteractablePlane.prototype = {
 
     }
 
-
     // note - include moveZ here when implemented.
     if ( moveX || moveY || moveZ ) this.emit( 'travel', this, this.mesh );
+
+    if (this.hoverBounds) this.emitHoverEvents();
+  },
+
+  // Takes the previousOverlap calculated earlier in this frame.
+  // If any within range, emits an event.
+  // note - could also emit an event on that fingertip?
+  emitHoverEvents: function(){
+
+    var overlap, isHovered;
+
+    for (var key in this.previousOverlap){
+
+      overlap = this.previousOverlap[key];
+
+      if ( overlap > this.hoverBounds[0] && overlap < this.hoverBounds[1] ) {
+
+        isHovered = true;
+        break;
+
+      }
+
+    }
+
+    if ( isHovered && !this.isHovered ){
+      this.isHovered = isHovered;
+      this.emit('hover', this.mesh)
+    }
+
+    if ( !isHovered && this.isHovered ){
+      this.isHovered = isHovered;
+      this.emit('hoverOut', this.mesh)
+    }
+
+  },
+
+  hover: function(handlerIn, handlerOut){
+
+    this.on('hover', handlerIn);
+
+    if (handlerOut){
+      this.on('hoverOut', handlerOut);
+    }
+
   },
 
   bindResize: function(){

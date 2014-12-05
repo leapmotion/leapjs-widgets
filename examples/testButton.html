@@ -88,9 +88,11 @@
   buttonMesh.scale.setY(0.5);
 
 
-  var button = new PushButton(
+  var squareButton = new PushButton(
 
-    new InteractablePlane(buttonMesh, Leap.loopController)
+    new InteractablePlane(buttonMesh, Leap.loopController),
+
+    {locking: false}
 
   ).on('press', function(mesh){
 
@@ -101,6 +103,16 @@
     mesh.material.color.setHex(0xeeeeee);
 
   });
+
+  squareButton.plane.hover(
+    function(mesh){ // over
+      mesh.material.color.setHex(0xffccff);
+    },
+    function(mesh){ // out
+      console.log('hover out');
+      mesh.material.color.setHex(0xeeeeee);
+    }
+  );
 
 
   var longThrow = -0.05;
@@ -113,7 +125,7 @@
     buttonMesh.geometry.parameters.height / 2 - longThrow / 2,
     -longThrow / 2
   );
-  button.plane.resetPosition(); // resets the original position, etc to the current one
+  squareButton.plane.resetPosition(); // resets the original position, etc to the current one
 
   base.add(buttonMesh);
 
@@ -129,7 +141,7 @@
   buttonMesh.position.set(-0.12, 0.1, -0.1);
   scene.add(buttonMesh);
 
-  var button = new PushButton(
+  var roundButton = new PushButton(
     // for now, constructing with moveX and moveY turned off so that doesn't try and watch for XY intersections,
     // which won't work for circles.
     // todo - have a setter for moveX and moveY, so that proximities can be turned on and off.
