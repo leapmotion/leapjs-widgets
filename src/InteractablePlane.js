@@ -68,6 +68,7 @@ window.InteractablePlane = function(planeMesh, controller, options){
   // Spring constant of a restoring force
   this.returnSpringK = null;
   this.force = new THREE.Vector3; // instantaneous force on a object.
+  this.springs = [];
 
   this.lastPosition = new THREE.Vector3;
   this.originalPosition = new THREE.Vector3;
@@ -211,6 +212,33 @@ window.InteractablePlane.prototype = {
     return newPosition;
   },
 
+  // Adds a spring
+  addSpring: function(relativePosition, springConstant){
+
+    var spring = {
+      position: relativePosition,
+      k: springConstant
+    };
+
+    this.springs.push(spring);
+
+    return spring;
+  },
+
+  removeSpring: function(spring) {
+
+    for (var i = 0; i < this.springs.length; i++){
+
+      if (this.springs[i] = spring){
+
+        this.springs.splice(i,1);
+
+      }
+
+    }
+
+  },
+
   cleanupHandData: function(hand){
     var key;
 
@@ -283,6 +311,17 @@ window.InteractablePlane.prototype = {
       this.force.add(
         springDisplacement.multiplyScalar( - this.returnSpringK )
       )
+
+    }
+
+    var spring, springDisplacement;
+    for (var i = 0; i < this.springs.length; i++){
+      spring = this.springs[i];
+      springDisplacement = this.mesh.position.clone().sub(spring.position);
+
+      this.force.add(
+        springDisplacement.multiplyScalar( - spring.k )
+      );
 
     }
 
