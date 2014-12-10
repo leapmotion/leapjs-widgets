@@ -1,5 +1,5 @@
 /*    
- * LeapJS-Plugins  - v0.1.11pre - 2014-11-25    
+ * LeapJS-Plugins  - v0.1.11pre - 2014-12-03    
  * http://github.com/leapmotion/leapjs-plugins/    
  *    
  * Copyright 2014 LeapMotion, Inc    
@@ -27,9 +27,11 @@
   initScene = function(targetEl, scale) {
     var camera, directionalLight, far, height, near, renderer, width;
     scope.scene = new THREE.Scene();
-    scope.renderer = renderer = new THREE.WebGLRenderer({
-      alpha: true
-    });
+    scope.rendererOps || (scope.rendererOps = {});
+    if (scope.rendererOps.alpha === void 0) {
+      scope.rendererOps.alpha = true;
+    }
+    scope.renderer = renderer = new THREE.WebGLRenderer(scope.rendererOps);
     width = window.innerWidth;
     height = window.innerHeight;
     renderer.setClearColor(0x000000, 0);
@@ -52,7 +54,7 @@
       far *= scale;
     }
     scope.camera = camera = new THREE.PerspectiveCamera(45, width / height, near, far);
-    camera.position.fromArray([0, 300, 500]);
+    camera.position.set(0, 300, 500);
     camera.lookAt(new THREE.Vector3(0, 160, 0));
     scope.scene.add(camera);
     window.addEventListener('resize', function() {
@@ -110,6 +112,9 @@
       mesh = new HandMesh;
       mesh.setVisibility(false);
       HandMesh.unusedHandMeshes.push(mesh);
+      if (HandMesh.onMeshCreated) {
+        HandMesh.onMeshCreated(mesh);
+      }
       return mesh;
     };
 
@@ -133,17 +138,20 @@
           mesh.name = "hand-bone-" + j;
           mesh.material.color.copy(jointColor);
           mesh.renderDepth = ((i * 9) + (2 * j)) / 36;
+          mesh.castShadow = true;
           scope.scene.add(mesh);
           finger.push(mesh);
           mesh = new THREE.Mesh(new THREE.CylinderGeometry(boneRadius, boneRadius, 40, 32), material.clone());
           mesh.name = "hand-joint-" + j;
           mesh.material.color.copy(boneColor);
           mesh.renderDepth = ((i * 9) + (2 * j) + 1) / 36;
+          mesh.castShadow = true;
           scope.scene.add(mesh);
           finger.push(mesh);
         }
         mesh = new THREE.Mesh(new THREE.SphereGeometry(jointRadius, 32, 32), material.clone());
         mesh.material.color.copy(jointColor);
+        mesh.castShadow = true;
         scope.scene.add(mesh);
         finger.push(mesh);
         this.fingerMeshes.push(finger);
@@ -155,6 +163,8 @@
         for (i = _k = 0; _k <= 3; i = ++_k) {
           this.armBones.push(new THREE.Mesh(new THREE.CylinderGeometry(boneRadius, boneRadius, (i < 2 ? 1000 : 100), 32), material.clone()));
           this.armBones[i].material.color.copy(boneColor);
+          this.armBones[i].castShadow = true;
+          this.armBones[i].name = "ArmBone" + i;
           if (i > 1) {
             this.armBones[i].quaternion.multiply(armTopAndBottomRotation);
           }
@@ -164,11 +174,25 @@
         for (i = _l = 0; _l <= 3; i = ++_l) {
           this.armSpheres.push(new THREE.Mesh(new THREE.SphereGeometry(jointRadius, 32, 32), material.clone()));
           this.armSpheres[i].material.color.copy(jointColor);
+          this.armSpheres[i].castShadow = true;
+          this.armSpheres[i].name = "ArmSphere" + i;
           this.armMesh.add(this.armSpheres[i]);
         }
         scope.scene.add(this.armMesh);
       }
     }
+
+    HandMesh.prototype.traverse = function(callback) {
+      var i, mesh, _i, _j, _len, _ref;
+      for (i = _i = 0; _i < 5; i = ++_i) {
+        _ref = this.fingerMeshes[i];
+        for (_j = 0, _len = _ref.length; _j < _len; _j++) {
+          mesh = _ref[_j];
+          callback(mesh);
+        }
+      }
+      return this.armMesh.traverse(callback);
+    };
 
     HandMesh.prototype.scaleTo = function(hand) {
       var armLenScale, armWidthScale, baseScale, bone, boneXOffset, finger, fingerBoneLengthScale, halfArmLength, i, j, mesh, _i, _j;
@@ -286,6 +310,9 @@
     if (!handMesh) {
       handMesh = HandMesh.get().scaleTo(hand);
       hand.data('handMesh', handMesh);
+      if (HandMesh.onMeshUsed) {
+        HandMesh.onMeshUsed(handMesh);
+      }
     }
     return handMesh.formTo(hand);
   };
@@ -300,7 +327,7 @@
   };
 
   Leap.plugin('boneHand', function(options) {
-    var scale;
+    var controller, scale;
     if (options == null) {
       options = {};
     }
@@ -319,6 +346,13 @@
     jointRadius = null;
     material = null;
     armTopAndBottomRotation = (new THREE.Quaternion).setFromEuler(new THREE.Euler(0, 0, Math.PI / 2));
+    controller = this;
+    HandMesh.onMeshCreated = function(mesh) {
+      return controller.emit('handMeshCreated', mesh);
+    };
+    HandMesh.onMeshUsed = function(mesh) {
+      return controller.emit('handMeshUsed', mesh);
+    };
     this.use('handEntry');
     this.use('handHold');
     if (scope.scene === void 0) {
@@ -331,7 +365,7 @@
         scope.camera.position.set(0, 0, 0);
       }
       if (this.plugins.transform && this.plugins.transform.vr === 'desktop') {
-        scope.camera.position.set(0, 0.3, 0.3);
+        scope.camera.position.set(0, 0.15, 0.3);
       }
     }
     if (scope.scene) {
