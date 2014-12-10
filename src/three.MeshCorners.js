@@ -181,3 +181,45 @@ THREE.CircleGeometry.prototype.area = function () {
   return Math.pow(this.parameters.radius, 2) * Math.PI;
 
 };
+
+THREE.Mesh.prototype.border = function(lineMaterial){
+  
+  var lineGeo = new THREE.Geometry();
+  lineGeo.vertices.push(
+    this.geometry.corners()[0],
+    this.geometry.corners()[1],
+    this.geometry.corners()[2],
+    this.geometry.corners()[3],
+    this.geometry.corners()[0],
+    this.geometry.corners()[4],
+    this.geometry.corners()[5],
+    this.geometry.corners()[6],
+    this.geometry.corners()[7],
+    this.geometry.corners()[4]
+  );
+
+  this.add(new THREE.Line(lineGeo, lineMaterial));
+
+  lineGeo = new THREE.Geometry();
+  lineGeo.vertices.push(
+    this.geometry.corners()[1],
+    this.geometry.corners()[5]
+  );
+  this.add(new THREE.Line(lineGeo, lineMaterial));
+
+  lineGeo = new THREE.Geometry();
+  lineGeo.vertices.push(
+    this.geometry.corners()[2],
+    this.geometry.corners()[6]
+  );
+
+  this.add(new THREE.Line(lineGeo, lineMaterial));
+
+  lineGeo = new THREE.Geometry();
+  lineGeo.vertices.push(
+    this.geometry.corners()[3],
+    this.geometry.corners()[7]
+  );
+  this.add(new THREE.Line(lineGeo, lineMaterial));
+  
+}
