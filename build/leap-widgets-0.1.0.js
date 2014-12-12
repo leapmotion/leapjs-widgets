@@ -29,6 +29,7 @@ window.InteractablePlane = function(planeMesh, controller, options){
   this.options.moveY  !== undefined    || (this.options.moveY   = true );
   this.options.moveZ  !== undefined    || (this.options.moveZ   = false );
   this.options.highlight  !== undefined|| (this.options.highlight = true); // this can be configured through this.highlightMesh
+  this.options.damping !== undefined   || (this.options.damping = 0.12); // this can be configured through this.highlightMesh
 
   this.mesh = planeMesh;
 
@@ -65,7 +66,6 @@ window.InteractablePlane = function(planeMesh, controller, options){
 
   this.tempVec3 = new THREE.Vector3;
 
-  this.drag = 1 - 0.12;
   this.density = 1;
   this.mass = this.mesh.geometry.area() * this.density;
   this.k = this.mass;
@@ -258,17 +258,33 @@ window.InteractablePlane.prototype = {
 
   },
 
-  // Takes each of five finger tips
-  // stores which side they are on, if any
-  // If a finger tip moves through the mesh, moves the mesh accordingly
-  // If two fingers fight.. rotate the mesh?
-  // Rotation could be interesting, as it would mean that the x/y/z translation functions should
-  // be updated, to compensate for the mesh's rotation
-  // This would probably work pretty well for flat planes. Not sure about other stuff. (e.g., 3d models which may
-  // need a base rotation. Perhaps they could be childs of a plane).
-  calcZForce: function(hands){
+  testZForce: function(){
 
-    var hand, finger, key, overlap, overlapPoint, sumPushthrough = 0;
+    var pushThrough = -0.01;
+
+    this.mesh.pointOverlap = function(){
+      return new THREE.Vector3(0,0,pushThrough)
+    };
+
+    this.interactiveJoints = function(){
+      return [[0,0,0]]
+    };
+
+    this.previousOverlap["undefined-0"] = pushThrough * -1; // opposite sign
+
+    var z = ( ( this.returnSpringK * this.originalPosition.z ) + ( pushThrough * this.k ) ) / ( this.returnSpringK + this.k );
+
+    var out = new THREE.Vector3;
+
+    this.getZPosition( [{}], out );
+
+    console.assert(out.z === z);
+
+  },
+
+  getPushthrough: function(hands, offset){
+
+    var hand, key, overlap, overlapPoint, sumPushthrough = 0, countPushthrough = 0, min = Infinity;
 
     // todo, make sure there's no frame lag in matrixWorld
     // (corners may be updated matrix world, causing this to coincidentally work)
@@ -288,11 +304,19 @@ window.InteractablePlane.prototype = {
 
         overlap = (overlapPoint && overlapPoint.z);
 
+        if (offset){
+          overlap += offset;
+        }
+
+
         if (overlap && this.previousOverlap[key] &&
            overlap * this.previousOverlap[key] < 0 // not same sign, therefore pushthrough
         ){
 
+          if (overlap < min) min = overlap;
+
           sumPushthrough += overlap;
+          countPushthrough++;
 
         }
 
@@ -306,7 +330,48 @@ window.InteractablePlane.prototype = {
 
     }
 
-    this.force.z += this.k * sumPushthrough;
+    return {
+      sum: sumPushthrough,
+      count: countPushthrough,
+      min: min
+    }
+
+  },
+
+  // uses analytic spring equations, rather than force-based physics.
+  getZPosition: function(hands, newPosition){
+
+    var pushthrough = this.getPushthrough(
+      hands,
+      this.mesh.position.z - this.originalPosition.z
+    );
+
+    // this spring equation works, but isin't really that great here
+    //newPosition.z = (this.returnSpringK * this.originalPosition.z + pushthrough.sum * this.k ) / (this.returnSpringK + pushthrough.count * this.k);
+
+
+    // Todo/note: currently, it would be better if any back-step (positive z direction) was ecluded from this update,
+    // Handing it over to force-based instead.  However, the force-based simulator currently would pull it too far,
+    // back in to the fingertips, causing a 60FPS flicker. :-(
+    if ( pushthrough.count > 0 ){
+      newPosition.z = pushthrough.min + this.originalPosition.z;
+    }
+
+  },
+
+  // Takes each of five finger tips
+  // stores which side they are on, if any
+  // If a finger tip moves through the mesh, moves the mesh accordingly
+  // If two fingers fight.. rotate the mesh?
+  // Rotation could be interesting, as it would mean that the x/y/z translation functions should
+  // be updated, to compensate for the mesh's rotation
+  // This would probably work pretty well for flat planes. Not sure about other stuff. (e.g., 3d models which may
+  // need a base rotation. Perhaps they could be childs of a plane).
+  calcZForce: function(hands){
+
+    var pushthrough = this.getPushthrough( hands );
+
+    this.force.z += this.k * pushthrough.sum;
 
     // note that there can still be significant high-frequency oscillation for large values of returnSpringK.
     // This probably mean that we just shouldn't support high-k (as a real-world material may fracture).
@@ -319,6 +384,11 @@ window.InteractablePlane.prototype = {
       )
 
     }
+
+    // balance forces
+    // spring foce = finger force
+    // kx = kx
+    //springDisplacement * returnSpringK = getPushthrough * this.k
 
     var spring, springDisplacement;
     for (var i = 0; i < this.springs.length; i++){
@@ -343,7 +413,7 @@ window.InteractablePlane.prototype = {
     newPosition.add( this.force.divideScalar(this.mass) );
     this.force.set(0,0,0);
 
-    newPosition.multiplyScalar(this.drag);
+    newPosition.multiplyScalar( 1 - this.options.damping );
 
     newPosition.add(this.mesh.position);
 
@@ -445,17 +515,23 @@ window.InteractablePlane.prototype = {
 
     }
 
-    if (this.options.moveZ){
+    if (this.options.moveZ && this.returnSpringK){
 
-      // add force to instantaneous velocity (position delta) divided by mass
-      // eventually, x and y should be converted to this as well.
-      this.calcZForce(frame.hands);
+      this.getZPosition( frame.hands, newPosition );
 
     }
 
+    // there's been no change, give it up to inertia, forces, and springs
     if ( newPosition.equals( this.mesh.position ) ) {
 
-      // there's been no change, give it up to inertia, forces, and springs
+      if (this.options.moveZ){
+
+        // add force to instantaneous velocity (position delta) divided by mass
+        // eventually, x and y should be converted to this as well.
+        this.calcZForce(frame.hands);
+
+      }
+
       // Todo - intera/physics stepping should probably take place on frame end, not on frame.
       this.stepPhysics(newPosition);
 
@@ -680,10 +756,15 @@ window.InteractablePlane.prototype = {
         );
       }
 
+      var endPos = finger.distal.nextJoint;
+      var offset = [0,0,0.02];
+      Leap.vec3.transformMat3(offset, offset, finger.distal.matrix() );
+      Leap.vec3.add(offset, endPos, offset);
+
       out.push(
         finger.pipPosition,
         finger.dipPosition,
-        finger.tipPosition
+        offset
       );
 
     }
@@ -796,8 +877,8 @@ var PushButton = function(interactablePlane, options){
   this.options.locking  !== undefined || (this.options.locking = true);
 
   // Todo - these should be a percentage of the button size, perhaps.
-  this.longThrow  = -0.05;
-  this.shortThrow = -0.03;
+  this.options.longThrow  !== undefined || (this.options.longThrow  = -0.05);
+  this.options.shortThrow !== undefined || (this.options.shortThrow = -0.03);
 
   this.pressed = false;
   this.canChangeState = true;
@@ -808,6 +889,7 @@ var PushButton = function(interactablePlane, options){
   }
 
 };
+
 
 PushButton.prototype.bindLocking = function(){
 
@@ -838,12 +920,12 @@ PushButton.prototype.releasedConstraint = function(z){
     return origZ;
   }
 
-  if (z < origZ + this.longThrow){
+  if (z < origZ + this.options.longThrow){
     if (!this.pressed && this.canChangeState){
       this.canChangeState = false;
       this.emit('press', this.plane.mesh);
     }
-    return origZ + this.longThrow;
+    return origZ + this.options.longThrow;
   }
 
   return z;
@@ -853,17 +935,17 @@ PushButton.prototype.releasedConstraint = function(z){
 PushButton.prototype.pressedConstraint = function(z){
   var origZ = this.plane.originalPosition.z;
 
-  if (z > origZ + this.shortThrow) {
+  if (z > origZ + this.options.shortThrow) {
     this.canRelease = true;
-    return origZ + this.shortThrow;
+    return origZ + this.options.shortThrow;
   }
 
-  if (z < origZ + this.longThrow){
+  if (z < origZ + this.options.longThrow){
     if (this.pressed && this.canRelease) {
       this.canRelease = false;
       this.emit('release', this.plane.mesh);
     }
-    return origZ + this.longThrow;
+    return origZ + this.options.longThrow;
   }
 
   return z;
@@ -1492,6 +1574,48 @@ THREE.CircleGeometry.prototype.area = function () {
   return Math.pow(this.parameters.radius, 2) * Math.PI;
 
 };
+
+THREE.Mesh.prototype.border = function(lineMaterial){
+  
+  var lineGeo = new THREE.Geometry();
+  lineGeo.vertices.push(
+    this.geometry.corners()[0],
+    this.geometry.corners()[1],
+    this.geometry.corners()[2],
+    this.geometry.corners()[3],
+    this.geometry.corners()[0],
+    this.geometry.corners()[4],
+    this.geometry.corners()[5],
+    this.geometry.corners()[6],
+    this.geometry.corners()[7],
+    this.geometry.corners()[4]
+  );
+
+  this.add(new THREE.Line(lineGeo, lineMaterial));
+
+  lineGeo = new THREE.Geometry();
+  lineGeo.vertices.push(
+    this.geometry.corners()[1],
+    this.geometry.corners()[5]
+  );
+  this.add(new THREE.Line(lineGeo, lineMaterial));
+
+  lineGeo = new THREE.Geometry();
+  lineGeo.vertices.push(
+    this.geometry.corners()[2],
+    this.geometry.corners()[6]
+  );
+
+  this.add(new THREE.Line(lineGeo, lineMaterial));
+
+  lineGeo = new THREE.Geometry();
+  lineGeo.vertices.push(
+    this.geometry.corners()[3],
+    this.geometry.corners()[7]
+  );
+  this.add(new THREE.Line(lineGeo, lineMaterial));
+  
+}
 // Adds a method to THREE.Mesh which figures out if a line segment intersects it.
 
 // http://en.wikipedia.org/wiki/Line-plane_intersection
