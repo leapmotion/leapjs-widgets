@@ -85,14 +85,18 @@
 
   buttonMesh.name = "rectangular button";
 
-  buttonMesh.scale.setY(0.5);
+//  buttonMesh.scale.setY(0.5);
 
 
+  var longThrow = -0.1;
   var squareButton = new PushButton(
 
     new InteractablePlane(buttonMesh, Leap.loopController),
 
-    {locking: false}
+    {
+      locking: false,
+      longThrow: longThrow
+    }
 
   ).on('press', function(mesh){
 
@@ -106,6 +110,7 @@
 
   squareButton.plane.hover(
     function(mesh){ // over
+      console.log('hover in');
       mesh.material.color.setHex(0xffccff);
     },
     function(mesh){ // out
@@ -115,10 +120,9 @@
   );
 
 
-  var longThrow = -0.05;
   var base = new THREE.Mesh(new THREE.BoxGeometry(0.1, longThrow, longThrow), new THREE.MeshPhongMaterial({color: 0x222222}));
   base.position.set(0.05, 0, -0.1);
-  base.rotateY(Math.PI / 4); // todo - once we can parent.
+  base.rotateY(Math.PI * -0.15);
 
   buttonMesh.position.set(
     0,
@@ -127,8 +131,8 @@
   );
   squareButton.plane.resetPosition(); // resets the original position, etc to the current one
 
-  base.rotateX(Math.PI * -0.45);
-  base.position.set(0.2,0,0.2);
+//  base.rotateX(Math.PI * -0.45);
+//  base.position.set(0.2,0,0.2);
 
   base.add(buttonMesh);
 
@@ -136,7 +140,7 @@
   
   
   // Circular button:
-  
+
   var circleGeo = new THREE.CircleGeometry(0.1, 32);
   buttonMesh = new THREE.Mesh(circleGeo, material.clone());
   buttonMesh.name = "round button";
@@ -159,7 +163,7 @@
     mesh.material.color.setHex(0xeeeeee);
 
   });
-  
+
 
 
 </script>
