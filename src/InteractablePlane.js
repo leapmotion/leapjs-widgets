@@ -21,6 +21,7 @@ window.InteractablePlane = function(planeMesh, controller, options){
   this.options.moveY  !== undefined    || (this.options.moveY   = true );
   this.options.moveZ  !== undefined    || (this.options.moveZ   = false );
   this.options.highlight  !== undefined|| (this.options.highlight = true); // this can be configured through this.highlightMesh
+  this.options.damping !== undefined   || (this.options.damping = 0.12); // this can be configured through this.highlightMesh
 
   this.mesh = planeMesh;
 
@@ -57,7 +58,6 @@ window.InteractablePlane = function(planeMesh, controller, options){
 
   this.tempVec3 = new THREE.Vector3;
 
-  this.drag = 1 - 0.12;
   this.density = 1;
   this.mass = this.mesh.geometry.area() * this.density;
   this.k = this.mass;
@@ -335,7 +335,7 @@ window.InteractablePlane.prototype = {
     newPosition.add( this.force.divideScalar(this.mass) );
     this.force.set(0,0,0);
 
-    newPosition.multiplyScalar(this.drag);
+    newPosition.multiplyScalar( 1 - this.options.damping );
 
     newPosition.add(this.mesh.position);
 
