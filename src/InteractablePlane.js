@@ -22,6 +22,7 @@ window.InteractablePlane = function(planeMesh, controller, options){
   this.options.moveZ  !== undefined    || (this.options.moveZ   = false );
   this.options.highlight  !== undefined|| (this.options.highlight = true); // this can be configured through this.highlightMesh
   this.options.damping !== undefined   || (this.options.damping = 0.12); // this can be configured through this.highlightMesh
+  this.options.hoverBounds !== undefined   || (this.options.hoverBounds = [0, 0.32]);  // react to hover within 3cm.
 
   this.mesh = planeMesh;
 
@@ -61,7 +62,6 @@ window.InteractablePlane = function(planeMesh, controller, options){
   this.density = 1;
   this.mass = this.mesh.geometry.area() * this.density;
   this.k = this.mass;
-  this.hoverBounds = [0, 0.32]; // react to hover within 3cm. We incude a negative number in case the hands push throuhg?
 
   this.isHovered = null;
 
@@ -582,7 +582,7 @@ window.InteractablePlane.prototype = {
     // note - include moveZ here when implemented.
     if ( moveX || moveY || moveZ ) this.emit( 'travel', this, this.mesh );
 
-    if (this.hoverBounds) this.emitHoverEvents();
+    if (this.options.hoverBounds) this.emitHoverEvents();
   },
 
   // Takes the previousOverlap calculated earlier in this frame.
@@ -596,7 +596,7 @@ window.InteractablePlane.prototype = {
 
       overlap = this.previousOverlap[key];
 
-      if ( overlap > this.hoverBounds[0] && overlap < this.hoverBounds[1] ) {
+      if ( overlap > this.options.hoverBounds[0] && overlap < this.options.hoverBounds[1] ) {
 
         isHovered = true;
         break;
