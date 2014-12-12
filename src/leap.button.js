@@ -21,8 +21,8 @@ var PushButton = function(interactablePlane, options){
   this.options.locking  !== undefined || (this.options.locking = true);
 
   // Todo - these should be a percentage of the button size, perhaps.
-  this.longThrow  = -0.05;
-  this.shortThrow = -0.03;
+  this.options.longThrow  !== undefined || (this.options.longThrow  = -0.05);
+  this.options.shortThrow !== undefined || (this.options.shortThrow = -0.03);
 
   this.pressed = false;
   this.canChangeState = true;
@@ -33,6 +33,7 @@ var PushButton = function(interactablePlane, options){
   }
 
 };
+
 
 PushButton.prototype.bindLocking = function(){
 
@@ -63,12 +64,12 @@ PushButton.prototype.releasedConstraint = function(z){
     return origZ;
   }
 
-  if (z < origZ + this.longThrow){
+  if (z < origZ + this.options.longThrow){
     if (!this.pressed && this.canChangeState){
       this.canChangeState = false;
       this.emit('press', this.plane.mesh);
     }
-    return origZ + this.longThrow;
+    return origZ + this.options.longThrow;
   }
 
   return z;
@@ -78,17 +79,17 @@ PushButton.prototype.releasedConstraint = function(z){
 PushButton.prototype.pressedConstraint = function(z){
   var origZ = this.plane.originalPosition.z;
 
-  if (z > origZ + this.shortThrow) {
+  if (z > origZ + this.options.shortThrow) {
     this.canRelease = true;
-    return origZ + this.shortThrow;
+    return origZ + this.options.shortThrow;
   }
 
-  if (z < origZ + this.longThrow){
+  if (z < origZ + this.options.longThrow){
     if (this.pressed && this.canRelease) {
       this.canRelease = false;
       this.emit('release', this.plane.mesh);
     }
-    return origZ + this.longThrow;
+    return origZ + this.options.longThrow;
   }
 
   return z;
