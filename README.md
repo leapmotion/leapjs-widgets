@@ -187,3 +187,7 @@ A number of methods are added to THREE.js core, and available to you to use, alt
  - `THREE.PlaneGeometry.prototype.corners = function()...`
  - `THREE.BoxGeometry.prototype.corners = function()...`
  - `THREE.Mesh.prototype.border = function(lineMaterial)...` - Creates line meshes around all edges of a cube, using the provided material. See [Live Demo](http://leapmotion.github.io/leapjs-widgets/examples/border.html).
+ - `THREE.Mesh.prototype.intersectedByLine = function(lineStart, lineEnd, worldPosition){` Adds a property `intersectionPoint` to the plane mesh, and returns it if that point is within the bounds of the plane segment.
+ - `THREE.Mesh.prototype.pointOverlap = function(point, inverseMatrix){`  Returns the coordinates in local space of the point relative to the mesh.
+ - `THREE.PlaneGeometry.prototype.pointOverlap`
+ - `THREE.CircleGeometry.prototype.pointOverlap`
