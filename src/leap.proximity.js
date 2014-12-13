@@ -193,10 +193,7 @@ Leap.plugin('proximity', function(scope){
 
     },
 
-    // There is an issue here where handPoints is not indexed per hand
-    // check where index is used, refactor. oops.
-    // test pictures and resizing.
-    // Todo - this loop is giant, and should be split in to methods for compiler optimization.
+    // Todo - this loop could be split in to smaller methods for JIT compiler optimization.
     checkLines: function(hand, lines){
       var mesh = this.mesh, state, intersectionPoint, key;
 
