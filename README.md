@@ -12,6 +12,8 @@ See the demos below for how to set this up in a couple of lines.
 ![vrcollage2s](https://cloud.githubusercontent.com/assets/407497/5421708/b2f6a38c-821d-11e4-947e-82f18b3c17b2.gif)
 
 
+Get it from the CDN at [js.leapmotion.com](http://js.leapmotion.com).
+
 ## XY Movement - Slide & Scroll
 
 InteractablePlane will take an existing THREE.js plane mesh and a LeapJS Controller, and allow any hands  in-frame to manipulate the plane.  Planes will carry a little bit of momentum after being released.
