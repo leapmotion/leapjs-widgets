@@ -6,18 +6,6 @@
  * Released under the Apache-2.0 license                                       
  * http://github.com/leapmotion/leapjs-widgets/blob/master/LICENSE             
  */
-// This is a 3d box, or 2d immersed surface
-// This takes in a Leap Controller and is added to a scene, or
-// Would be great to use RequireJS, but that's not set up for this project currently.
-// This is an experimental class
-// it does:
-// - Handle resizing
-// -  with visual affordances made from DOM
-// - Moving
-// - Mesh deformations
-// - etc?
-// there's very nothing in this class which cares if it is a box or a plane.
-
 (function() {
   'use strict';
 
@@ -151,13 +139,11 @@ window.InteractablePlane.prototype = {
 
   },
 
-  // This is analagous to your typical scroll event.
   touch: function(callback){
     this.on('touch', callback);
     return this
   },
 
-  // This is analagous to your typical scroll event.
   release: function(callback){
     this.on('release', callback);
     return this
@@ -205,7 +191,7 @@ window.InteractablePlane.prototype = {
       }
     }
 
-    // todo - experiment with spring physics, like what's seen in beer-pong
+    // todo - experiment with spring physics
     if ( intersectionCount < this.fingersRequiredForMove) {
 
       newPosition.copy(this.mesh.position);
@@ -1150,10 +1136,7 @@ Leap.plugin('proximity', function(scope){
 
     },
 
-    // There is an issue here where handPoints is not indexed per hand
-    // check where index is used, refactor. oops.
-    // test pictures and resizing.
-    // Todo - this loop is giant, and should be split in to methods for compiler optimization.
+    // Todo - this loop could be split in to smaller methods for JIT compiler optimization.
     checkLines: function(hand, lines){
       var mesh = this.mesh, state, intersectionPoint, key;
 
