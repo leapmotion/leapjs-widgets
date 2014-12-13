@@ -20,10 +20,20 @@
       width: 100%;
       height: 100%;
     }
+
+    #view-source {
+      position: absolute;
+      top: 0;
+      right: 0;
+      margin: 10px;
+      z-index: 10;
+    }
   </style>
 
 </head>
 <body>
+
+<a id="view-source" href="#">View Source</a>
 
 </body>
 
@@ -66,6 +76,11 @@
   }));
 
   scene.add(mesh);
+
+
+  document.getElementById('view-source').href = "view-source:" + window.location.href;
+  document.getElementById('view-source').target = "_blank";
+
 
 </script>
 

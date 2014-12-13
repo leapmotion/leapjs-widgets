@@ -20,31 +20,22 @@
       width: 100%;
       height: 100%;
     }
+
+    #view-source {
+      position: absolute;
+      top: 0;
+      right: 0;
+      margin: 10px;
+      z-index: 10;
+    }
   </style>
 
 </head>
 <body>
 
-<p>
-  Todo - set up the following test cases:
-</p>
-<ul>
-  <li>Plane √</li>
-  <li>Angled Plane √</li>
-  <li>Parented Plane √</li>
-  <li>Parented Angled Plane √</li>
-  <li>Discs √</li>
-  <li>Hoverstate</li> <!-- We could do a hoverstate, but it might be much cooler to have glow-in-hand -->
-  <li>Scale? √</li>
-  <li>Stress Test</li>
-</ul>
+<a id="view-source" href="#">View Source</a>
 
-<h3>
-  Notes on docs:
-</h3>
-<p>
-  We work on meters, to have standard border width, etc.
-</p>
+<p>Leftmost button locks, rightmost does not.</p>
 
 </body>
 
@@ -165,6 +156,9 @@
   });
 
 
+
+  document.getElementById('view-source').href = "view-source:" + window.location.href;
+  document.getElementById('view-source').target = "_blank";
 
 </script>
 

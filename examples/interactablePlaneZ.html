@@ -20,13 +20,23 @@
       width: 100%;
       height: 100%;
     }
+
+    #view-source {
+      position: absolute;
+      top: 0;
+      right: 0;
+      margin: 10px;
+      z-index: 10;
+    }
   </style>
 
 </head>
 <body>
 
+<a id="view-source" href="#">View Source</a>
+
 <p>
-  Todo - set up the following test cases:
+  Works with:
 </p>
 <ul>
   <li>Plane</li>
@@ -35,15 +45,7 @@
   <li>Parented Angled Plane</li>
   <li>Discs</li>
   <li>Scaled Plane</li>
-  <li>Stress test</li>
 </ul>
-
-<h3>
-  Notes on docs:
-</h3>
-<p>
-  We work on meters, to have standard border width, etc.
-</p>
 
 </body>
 
@@ -70,7 +72,7 @@
   var renderer = Leap.loopController.plugins.boneHand.renderer;
   camera.position.set( 0, 0.3, 0.6);
 
-  var controls = new THREE.OrbitControls( camera );
+  var controls = new THREE.OrbitControls( camera, renderer.domElement );
 
   var axisHelper = new THREE.AxisHelper( 0.1 );
   scene.add( axisHelper );
@@ -99,6 +101,10 @@
 
   var plane = new InteractablePlane(planeMesh, Leap.loopController, {moveZ: true, moveX: false, moveY: false});
 
+
+
+  document.getElementById('view-source').href = "view-source:" + window.location.href;
+  document.getElementById('view-source').target = "_blank";
 
 </script>
 
