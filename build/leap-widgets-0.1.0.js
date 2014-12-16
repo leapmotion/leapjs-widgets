@@ -18,7 +18,7 @@ window.InteractablePlane = function(planeMesh, controller, options){
   this.options.moveZ  !== undefined    || (this.options.moveZ   = false );
   this.options.highlight  !== undefined|| (this.options.highlight = true); // this can be configured through this.highlightMesh
   this.options.damping !== undefined   || (this.options.damping = 0.12); // this can be configured through this.highlightMesh
-  this.options.hoverBounds !== undefined   || (this.options.hoverBounds = [0, 0.32]);  // react to hover within 3cm.
+  this.options.hoverBounds !== undefined  || (this.options.hoverBounds = [0, 0.32]);  // react to hover within 3cm.
 
   this.mesh = planeMesh;
 
@@ -233,11 +233,12 @@ window.InteractablePlane.prototype = {
 
   },
 
-  cleanupHandData: function(hand){
+  cleanupHandData: function (hand) {
     var key;
 
-    for (var i = 0; i < 5; i++){
-      key = hand.id + '-' + i;
+    var points = this.interactiveJoints(hand);
+    for (var i = 0; i < points.length; i++) {
+      key = hand.id + "-" + i;
       delete this.intersections[key];
       delete this.previousOverlap[key];
     }
