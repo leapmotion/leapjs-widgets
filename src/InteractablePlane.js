@@ -41,10 +41,6 @@ window.InteractablePlane = function(planeMesh, controller, options){
   // Todo - it would be great to have a "bouncy constraint" option, which would act like the scroll limits on OSX
   this.movementConstraints = {};
 
-  // If this is ever increased above one, that initial finger can not be counted when averaging position
-  // otherwise, it causes jumpyness.
-  this.fingersRequiredForMove = 1;
-
   this.tempVec3 = new THREE.Vector3;
 
   this.density = 1;
@@ -167,35 +163,37 @@ window.InteractablePlane.prototype = {
   // Returns the position of the mesh intersected
   // If position is passed in, sets it.
   getPosition: function(position){
-    var newPosition = position || new THREE.Vector3, intersectionCount = 0;
+    var sumDelta = (position || new THREE.Vector3).set(0,0,0), intersectionCount = 0;
+    var n = new THREE.Vector3;
+
 
     for ( var intersectionKey in this.intersections ){
       if( this.intersections.hasOwnProperty(intersectionKey) ){
 
         intersectionCount++;
 
-        newPosition.add(
-          this.moveProximity.intersectionPoints[intersectionKey].clone().sub(
-            this.intersections[intersectionKey]
-          )
-        )
+        n.subVectors(
+          this.moveProximity.intersectingLines[intersectionKey][1],
+          this.moveProximity.intersectingLines[intersectionKey][0]
+        ).normalize();
+
+        // TODO this should always return something.
+        var delta = this.moveProximity.delta(intersectionKey);
+
+        if ( delta ){
+          sumDelta.add(
+            delta.projectOnPlane(n)
+          );
+        }
+
 
       }
     }
 
-    // todo - experiment with spring physics
-    if ( intersectionCount < this.fingersRequiredForMove) {
+    // becomes averageDelta
+    if ( intersectionCount > 1 ) sumDelta.divideScalar(intersectionCount);
 
-      newPosition.copy(this.mesh.position);
-
-    } else {
-
-      newPosition.divideScalar(intersectionCount);
-
-    }
-
-
-    return newPosition;
+    return sumDelta.add(this.mesh.position);
   },
 
   // Adds a spring
@@ -579,6 +577,7 @@ window.InteractablePlane.prototype = {
 
     var overlap, isHovered;
 
+    // "Not optimized: ForInStatement is not fast case"
     for (var key in this.previousOverlap){
 
       overlap = this.previousOverlap[key];

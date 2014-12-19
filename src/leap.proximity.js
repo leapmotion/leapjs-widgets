@@ -123,13 +123,6 @@ Leap.plugin('proximity', function(scope){
   // mode:
 
   var Proximity = function(mesh, handPoints, options){
-    setTimeout( // pop out of angular scope.
-      function(){
-        testIntersectionPointBetweenLines()
-      },
-      0
-    );
-
     options || (options = {});
     this.options = options;
 
@@ -139,6 +132,8 @@ Leap.plugin('proximity', function(scope){
     // These are both keyed by the string: hand.id + handPointIndex
     this.states = {};
     this.intersectionPoints = {}; // checkLines: one for each handPoint.  Position in world space.
+    this.lastIntersectionPoints = {};
+    this.intersectingLines = {};
 
     // Similar to above, but also includes point on the plane, but not on the plane segment.
     // This is used for responding to between-frame motion
@@ -173,6 +168,7 @@ Leap.plugin('proximity', function(scope){
       return this
     },
 
+    // todo this is kind of a dumb method and should be architected out
     check: function(hand){
 
       // Handles Spheres. Planes. Boxes? other shapes? custom shapes?
@@ -195,16 +191,19 @@ Leap.plugin('proximity', function(scope){
 
     // Todo - this loop could be split in to smaller methods for JIT compiler optimization.
     checkLines: function(hand, lines){
-      var mesh = this.mesh, state, intersectionPoint, key;
+      var mesh = this.mesh, state, intersectionPoint, key, line;
 
       var worldPosition = (new THREE.Vector3).setFromMatrixPosition( this.mesh.matrixWorld );
 
+      this.intersectingLines = {};
+
       // j because this is inside a loop for every hand
-      for (var j = 0; j < lines.length; j++){
+      for (var i = 0; i < lines.length; i++){
 
-        key = hand.id + '-' + j;
+        line = lines[i];
+        key = hand.id + '-' + i;
 
-        intersectionPoint = mesh.intersectedByLine(lines[j][0], lines[j][1], worldPosition);
+        intersectionPoint = mesh.intersectedByLine(line[0], line[1], worldPosition);
 
         var lastIntersectionPoint = this.possibleIntersectionPoints[key];
 
@@ -279,7 +278,9 @@ Leap.plugin('proximity', function(scope){
 
         if (intersectionPoint){
 
+          this.lastIntersectionPoints[key] = this.intersectionPoints[key];
           this.intersectionPoints[key] = intersectionPoint;
+          this.intersectingLines[key] = line;
 
         } else if (this.intersectionPoints[key]) {
 
@@ -300,11 +301,25 @@ Leap.plugin('proximity', function(scope){
         state = intersectionPoint ? 'in' : 'out';
 
         if ( (state == 'in' && this.states[key] !== 'in') || (state == 'out' && this.states[key] === 'in')){ // this logic prevents initial `out` events.
-          this.emit(state, hand, intersectionPoint, key, j); // todo - could include intersection displacement vector here (!)
+          this.emit(state, hand, intersectionPoint, key, i); // todo - could include intersection displacement vector here (!)
           this.states[key] = state;
         }
 
       }
+
+    },
+
+    // Gets the change in position between this frame and last for the given line key
+    // This function maybe should be merged with various high-speed logic in checkLines
+    // When it comes to entering and existing the mesh.
+    delta: function(key){
+
+      if (!this.lastIntersectionPoints[key] || !this.intersectionPoints[key]) return;
+
+      return (new THREE.Vector3).subVectors(
+        this.intersectionPoints[key],
+        this.lastIntersectionPoints[key]
+      )
 
     },
 
