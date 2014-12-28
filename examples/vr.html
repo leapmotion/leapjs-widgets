@@ -1,0 +1,157 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="//cdnjs.cloudflare.com/ajax/libs/three.js/r69/three.js"></script>
+  <!--<script src="js/three.js"></script>-->
+  <script src="//js.leapmotion.com/leap-0.6.4.js"></script>
+  <!--<script src="js/leap-0.6.4.js"></script>-->
+  <script src="js/leap-plugins-0.1.11pre.js"></script>
+
+  <script src="../build/leap-widgets-0.1.0.js"></script>
+
+  <script src="js/VRControls.js"></script>
+  <script src="js/VREffect.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+    }
+    canvas.leap-boneHand{
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    #view-source {
+      position: absolute;
+      top: 0;
+      right: 0;
+      margin: 10px;
+      z-index: 10;
+    }
+  </style>
+
+</head>
+<body>
+
+<a id="view-source" href="#">View Source</a>
+
+<p>Leftmost button locks, rightmost does not.</p>
+
+</body>
+
+<script>
+  'use strict';
+
+  // Set up plugins
+
+  Leap.loop({background: true})
+    .use('transform', {
+      vr: true
+    })
+    .use('boneHand', {
+      targetEl: document.body,
+      jointColor: new THREE.Color(0xffffff),
+      rendererOps: {antialias: true}
+    })
+    .use('proximity');
+
+
+  // Set up scene
+
+  var scene = Leap.loopController.plugins.boneHand.scene;
+  var camera = Leap.loopController.plugins.boneHand.camera;
+  var renderer = Leap.loopController.plugins.boneHand.renderer;
+
+  // Set up VR
+
+  var vrControls = new THREE.VRControls(camera);
+
+  var vrEffect = new THREE.VREffect(renderer);
+
+
+  var onkey = function(event) {
+    if (event.key === 'z') {
+      vrControls.zeroSensor();
+    }
+    if (event.key === 'f') {
+      return vrEffect.setFullScreen(true);
+    }
+  };
+
+  window.addEventListener("keypress", onkey, true);
+
+  Leap.loopController.plugins.boneHand.render = function () {
+    console.log('r');
+    vrControls.update();
+    vrEffect.render(scene, camera);
+  };
+
+
+
+  // Add a plane
+
+  var planeGeo = new THREE.PlaneGeometry(0.1, 0.2);
+  var material = new THREE.MeshPhongMaterial();
+  var buttonMesh = new THREE.Mesh(planeGeo, material);
+
+  buttonMesh.name = "rectangular button";
+
+
+  var longThrow = -0.1;
+  var squareButton = new PushButton(
+
+    new InteractablePlane(buttonMesh, Leap.loopController),
+
+    {
+      locking: false,
+      longThrow: longThrow
+    }
+
+  ).on('press', function(mesh){
+
+    mesh.material.color.setHex(0xccccff);
+
+  }).on('release', function(mesh){
+
+    mesh.material.color.setHex(0xeeeeee);
+
+  });
+
+  squareButton.plane.hover(
+    function(mesh){ // over
+      console.log('hover in');
+      mesh.material.color.setHex(0xffccff);
+    },
+    function(mesh){ // out
+      console.log('hover out');
+      mesh.material.color.setHex(0xeeeeee);
+    }
+  );
+
+
+  var base = new THREE.Mesh(new THREE.BoxGeometry(0.1, longThrow, longThrow), new THREE.MeshPhongMaterial({color: 0x222222}));
+  base.position.set(0.08, -0.15, -0.36);
+
+  buttonMesh.position.set(
+    0,
+    buttonMesh.geometry.parameters.height / 2 - longThrow / 2,
+    -longThrow / 2
+  );
+  squareButton.plane.resetPosition(); // resets the original position, etc to the current one
+
+  base.add(buttonMesh);
+
+  scene.add(base);
+
+
+
+
+  document.getElementById('view-source').href = "view-source:" + window.location.href;
+  document.getElementById('view-source').target = "_blank";
+
+</script>
+
+</html>
