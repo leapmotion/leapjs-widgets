@@ -420,7 +420,7 @@ window.InteractablePlane.prototype = {
     // todo - rename to something that's not a mozilla method
     var proximity = this.moveProximity = this.controller.watch(
       this.mesh,
-      this.interactiveEndBones
+      this.interactiveBones
     );
 
     // this ties InteractablePlane to boneHand plugin - probably should have callbacks pushed out to scene.
@@ -564,7 +564,6 @@ window.InteractablePlane.prototype = {
 
     }
 
-    // note - include moveZ here when implemented.
     if ( moveX || moveY || moveZ ) this.emit( 'travel', this, this.mesh );
 
     if (this.options.hoverBounds) this.emitHoverEvents();
@@ -690,7 +689,8 @@ window.InteractablePlane.prototype = {
   // Order matters for our own use in this class
   // returns a collection of lines to be tested against
   // could be optimized to reuse vectors between frames
-  interactiveEndBones: function(hand){
+  interactiveBones: function(hand){
+
     var out = [], finger;
 
     for (var i = 0; i < 5; i++){
@@ -699,13 +699,17 @@ window.InteractablePlane.prototype = {
       if (i > 0){ // no thumb proximal
         out.push(
           [
-            (new THREE.Vector3).fromArray(finger.proximal.nextJoint),
-            (new THREE.Vector3).fromArray(finger.proximal.prevJoint)
+            (new THREE.Vector3).fromArray(finger.metacarpal.nextJoint),
+            (new THREE.Vector3).fromArray(finger.metacarpal.prevJoint)
           ]
         );
       }
 
       out.push(
+        [
+          (new THREE.Vector3).fromArray(finger.proximal.nextJoint),
+          (new THREE.Vector3).fromArray(finger.proximal.prevJoint)
+        ],
         [
           (new THREE.Vector3).fromArray(finger.medial.nextJoint),
           (new THREE.Vector3).fromArray(finger.medial.prevJoint)
