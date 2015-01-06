@@ -279,6 +279,25 @@
     }
   ];
 
+  tests.twoLinesOnEnd = [
+    function(){
+      v1.set(0,  0.1, -0.05);
+      v2.set(-0.01, 0.1, -0.09);
+      v3.copy(v2);
+      v4.set(-0.03, 0.1, -0.15);
+      line.geometry.verticesNeedUpdate = true
+      line2.geometry.verticesNeedUpdate = true
+    },
+    function(){
+      moveLineX(0.02);
+      moveLine2X(0.02);
+    },
+    function(){
+      moveLineX(0.01);
+      moveLine2X(0.01);
+    }
+  ];
+
   var testNames = [];
   for (var key in tests){
     if (tests.hasOwnProperty(key)){
@@ -290,7 +309,7 @@
   setLine2X(-0.05, 0.07);
 
 
-  window.run('moveLineInSlopedForwards');
+  window.run('twoLinesOnEnd');
 
 
 </script>

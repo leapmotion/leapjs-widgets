@@ -191,7 +191,7 @@ window.InteractablePlane.prototype = {
       ns.push( n.clone() );
 
       var delta = this.moveProximity.positionChange(intersectionKey);
-      if (!delta) continue;
+      if ( !delta || ( delta.x === 0 && delta.y === 0 && delta.z === 0) ) continue;
 
       // todo - "play" factor? Allow a smidgen of xy and maybe some rotation at strong z angles, indicating bend
 
