@@ -233,6 +233,8 @@ Leap.plugin('proximity', function(scope){
 
           for (var j = 0; j < 4; j++){
 
+            // todo - this doesn't work with circles..
+            // maybe: who cares?
             var point = intersectionPointBetweenLines(
               corners[j],
               corners[(j+1) % 4],

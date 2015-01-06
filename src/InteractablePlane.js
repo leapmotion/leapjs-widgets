@@ -205,7 +205,22 @@ window.InteractablePlane.prototype = {
       // y = mx + b
       // m = rise/run = n.x / n.z
       // z = n.z / n.x * delta.x
-      z = n.z / n.x * delta.x * -1;
+      z = 0;
+      if (n.x !==0) z += n.z / n.x * delta.x * -1;
+      if (n.y !==0) z += n.z / n.y * delta.y * -1;
+
+      // add to that: y
+      // for edge cases on the x edge, there will naturally be no delta y, yay.
+      // - if the previous point is projected horizonally
+      // - but that's probably not it - instead, it's projected directly between two points
+
+      // for edge conditions:
+      // the above only looks at z from x, which happens to work due to the geo arrangement of our tests
+      // We also need to look at y
+      // and actually rotate the line vector be be square to the edge.
+      // and then always compare against, say, its x dimension.
+      // to work with squares, circles, etc.
+      // we only care about delta in the normal, and line slope in the normal.
 
       // Don't move farther than bone end
       // note: there's got to be a better way of doing this :-/

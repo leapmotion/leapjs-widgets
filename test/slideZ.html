@@ -179,6 +179,14 @@
     line.geometry.verticesNeedUpdate = true
   }
 
+  window.moveLineXY = function(x,y){
+    v1.x += x;
+    v2.x += x;
+    v1.y += y;
+    v2.y += y;
+    line.geometry.verticesNeedUpdate = true
+  }
+
   window.moveLine2X = function(amt){
     amt || (amt = 0.01);
     v3.x += amt;
@@ -277,8 +285,8 @@
       v2.set(-0.01, 0.1, -0.09);
       v3.copy(v2);
       v4.set(-0.03, 0.1, -0.15);
-      line.geometry.verticesNeedUpdate = true
-      line2.geometry.verticesNeedUpdate = true
+      line.geometry.verticesNeedUpdate = true;
+      line2.geometry.verticesNeedUpdate = true;
     },
     function(){
       moveLineX(0.02);
@@ -304,7 +312,29 @@
         moveLineX(0.0004)
       })
     }
-  ]
+  ];
+
+  tests.verticalMotion = [
+    function(){
+      v1.set(0.02,0.25,0.05);
+      v2.set(0.04,0.22,-0.15);
+      line.geometry.verticesNeedUpdate = true;
+    },
+    function(){
+      moveLineY(-0.04)
+    }
+  ];
+
+  tests.diagonalMotion = [
+    function(){
+      v1.set(0.02,0.15,0.05);
+      v2.set(0.02,0.12,-0.15);
+      line.geometry.verticesNeedUpdate = true;
+    },
+    function(){
+      moveLineXY(0.005,0.005);
+    }
+  ];
 
   var testNames = [];
   for (var key in tests){
@@ -317,7 +347,7 @@
   setLine2X(-0.05, 0.07);
 
 
-  window.run('moveLineInTwice');
+  window.run('diagonalMotion');
 
 
 </script>
