@@ -163,37 +163,95 @@ window.InteractablePlane.prototype = {
   // Returns the position of the mesh intersected
   // If position is passed in, sets it.
   getPosition: function(position){
-    var sumDelta = (position || new THREE.Vector3).set(0,0,0), intersectionCount = 0;
+    var newPosition = (position || new THREE.Vector3).set(0,0,0);
     var n = new THREE.Vector3;
 
+    // todo:
+    // if two conflicting Z directions... take the part that works with both?
+    // ... take the strongest, (which will be the one that moves the least?)
+    // ... z strength is the complement of z distance
+    // ... only matters when comparing two things of strength infinity
+    // ... first, catch a test that case (if z1 sign != z2 sign, debugger)
+    // find the point where two lines cross, that is where the plane should z
+    // that is they solve for the same point.
+    // if multiple agreeing Z directions.. take the largest
 
-    for ( var intersectionKey in this.intersections ){
-      if( this.intersections.hasOwnProperty(intersectionKey) ){
+    // todo: factor back in Y movement and officially scrap this.intersections
 
-        intersectionCount++;
+    var zs = [], maxi, i = 0, ns = [], z, p1, p2, intersectionPoint;
 
-        n.subVectors(
-          this.moveProximity.intersectingLines[intersectionKey][1],
-          this.moveProximity.intersectingLines[intersectionKey][0]
-        ).normalize();
+    for ( var intersectionKey in this.moveProximity.intersectionPoints ) {
+      if( !this.moveProximity.intersectionPoints.hasOwnProperty(intersectionKey) ) continue;
 
         // TODO this should always return something.
         var delta = this.moveProximity.delta(intersectionKey);
+      p1 = this.moveProximity.intersectingLines[intersectionKey][0]; // line beginning
 
-        if ( delta ){
-          sumDelta.add(
-            delta.projectOnPlane(n)
-          );
-        }
+      n.subVectors(p2, p1);
 
+      ns.push( n.clone() );
 
+      var delta = this.moveProximity.positionChange(intersectionKey);
+      if (!delta) continue;
+
+      // todo - "play" factor? Allow a smidgen of xy and maybe some rotation at strong z angles, indicating bend
+
+      // only x and z
+      // var scale = delta.x / n.x;
+      // sumDelta = n.z * scale
+      // will work for movement to the right right, but not up
+      // let's try
+      // for y - maybe take max of two
+
+      // y = mx + b
+      // m = rise/run = n.x / n.z
+      // z = n.z / n.x * delta.x
+      z = n.z / n.x * delta.x * -1;
+
+      // Don't move farther than bone end
+      if ( z > 0 ) {
+        z = Math.min(z, p2.z - intersectionPoint.z);
+      } else {
+        z = Math.max(z, p1.z - intersectionPoint.z);
       }
+
+      zs.push(z);
+
+      // find the bone which causes the most movement.
+      if ( maxi === undefined ){
+        maxi = 0;
+      } else {
+        if (zs[i] * zs[maxi] < 0) debugger; // unsupported conflicting directions
+
+        if (zs[i] > 0 && zs[i] > zs[maxi]) maxi = i;
+        if (zs[i] < 0 && zs[i] < zs[maxi]) maxi = i;
+      }
+
+      i++;
     }
 
-    // becomes averageDelta
-    if ( intersectionCount > 1 ) sumDelta.divideScalar(intersectionCount);
+    newPosition.copy(this.mesh.position);
 
-    return sumDelta.add(this.mesh.position);
+    if ( maxi !== undefined ){
+
+      // what happens when this combines with movement constraints?
+      // todo - check y
+      var intersectionOffset = ns[maxi].multiplyScalar(zs[maxi] / ns[maxi].z);
+
+      for ( var intersectionKey in this.moveProximity.intersectionPoints ) {
+        if( !this.moveProximity.intersectionPoints.hasOwnProperty(intersectionKey) ) continue;
+
+        this.moveProximity.intersectionPoints[intersectionKey].add(intersectionOffset);
+
+      }
+
+      newPosition.z += zs[maxi];
+
+      //console.assert( zs[maxi] == intersectionOffset.z);
+
+    }
+
+    return newPosition
   },
 
   // Adds a spring
