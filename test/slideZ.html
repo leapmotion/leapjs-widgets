@@ -95,7 +95,8 @@
 
   plane.moveProximity.handPoints = function(){
     return [
-      [v1, v2]
+      [v1, v2],
+      [v3, v4]
     ]
   };
 
@@ -112,6 +113,7 @@
 
 
   window.currentTest = null;
+  window.currentTestStep = 0;
   window.lastTestIndex = null;
   window.run = function (testName) {
     window.lastTestIndex = window.testNames.indexOf(testName);
@@ -121,27 +123,53 @@
 //    plane.cleanupHandData();
     tests[testName][0]();
     window.currentTest = testName;
+    window.currentTestStep = 1;
     print('press a key');
   };
 
   document.addEventListener('keydown', function (e) {
     console.log('keyDown');
-    if (!window.currentTest) {
-      // advance to next test
-      var test = window.testNames[window.lastTestIndex+1];
-      if (!test) {
-        console.log('all tests run');
-        return
-      }
-      window.run(test);
-      return
-    }
-    tests[currentTest][1]();
-    window.currentTest = null;
+//    if (!window.currentTest) {
+//      // advance to next test
+//      var test = window.testNames[window.lastTestIndex+1];
+//      if (!test) {
+//        console.log('all tests run');
+//        return
+//      }
+//      window.run(test);
+//      return
+//    }
+    var step = tests[currentTest][currentTestStep];
+    if (!step) return;
+    step();
+    currentTestStep++;
+//    window.currentTest = null;
   });
 
   var v1 = new THREE.Vector3(0,   0.1,-0.15);
   var v2 = new THREE.Vector3(0.05,0.1,0.05);
+  var v3 = new THREE.Vector3(0,   0.1,-0.15);
+  var v4 = new THREE.Vector3(0.05,0.1,0.05);
+
+  var lineGeometry = new THREE.Geometry();
+  lineGeometry.vertices.push( v1, v2 );
+
+  var line = new THREE.Line(
+    lineGeometry,
+    new THREE.LineBasicMaterial({ color: 0x0000ff })
+  );
+
+  scene.add(line);
+
+  var lineGeometry2 = new THREE.Geometry();
+  lineGeometry2.vertices.push( v3, v4 );
+
+  var line2 = new THREE.Line(
+    lineGeometry2,
+    new THREE.LineBasicMaterial({ color: 0x00ee33 })
+  );
+
+  scene.add(line2);
 
   // tests:
   // move line in √
@@ -163,6 +191,13 @@
     line.geometry.verticesNeedUpdate = true
   }
 
+  window.moveLine2X = function(amt){
+    amt || (amt = 0.01);
+    v3.x += amt;
+    v4.x += amt;
+    line2.geometry.verticesNeedUpdate = true
+  }
+
   window.moveLineY = function(amt){
     amt || (amt = 0.01);
     v1.y += amt;
@@ -175,6 +210,15 @@
     offset || (offset = 0.05);
     v1.setX(pos);
     v2.setX(pos + offset);
+    line.geometry.verticesNeedUpdate = true
+  }
+
+  window.setLine2X = function(pos, offset){
+    pos || (pos = 0);
+    offset || (offset = 0.07);
+    v3.setX(pos);
+    v4.setX(pos + offset);
+    line2.geometry.verticesNeedUpdate = true
   }
 
   var tests = {};
@@ -185,6 +229,21 @@
     },
     function(){
       moveLineX(0.04)
+    } ,
+    function(){
+      moveLineX(-0.01)
+    }
+  ];
+
+  tests.moveLineInTwice = [
+    function(){
+      setLineX(-0.05);
+    },
+    function(){
+      moveLineX(0.04)
+    } ,
+    function(){
+      moveLineX(0.01)
     }
   ];
 
@@ -206,6 +265,17 @@
     }
   ];
 
+  tests.twoLinesDissimilarSlopes = [
+    function(){
+      setLineX(-0.05, 0.05);
+      setLine2X(-0.05, 0.07);
+    },
+    function(){
+      moveLineX(0.04);
+      moveLine2X(0.04);
+    }
+  ];
+
   var testNames = [];
   for (var key in tests){
     if (tests.hasOwnProperty(key)){
@@ -213,20 +283,12 @@
     }
   }
 
+  setLineX(-0.05, 0.05);
+  setLine2X(-0.05, 0.07);
 
-  window.run('moveLineInSlopedForwards');
 
+  window.run('moveLineIn');
 
-
-  var lineGeometry = new THREE.Geometry();
-  lineGeometry.vertices.push( v1, v2 );
-
-  var line = new THREE.Line(
-    lineGeometry,
-    new THREE.LineBasicMaterial({ color: 0x0000ff })
-  );
-
-  scene.add(line);
 
 </script>
 

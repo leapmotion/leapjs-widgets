@@ -183,9 +183,9 @@ window.InteractablePlane.prototype = {
     for ( var intersectionKey in this.moveProximity.intersectionPoints ) {
       if( !this.moveProximity.intersectionPoints.hasOwnProperty(intersectionKey) ) continue;
 
-        // TODO this should always return something.
-        var delta = this.moveProximity.delta(intersectionKey);
       p1 = this.moveProximity.intersectingLines[intersectionKey][0]; // line beginning
+      p2 = this.moveProximity.intersectingLines[intersectionKey][1]; // line end
+      intersectionPoint = this.moveProximity.intersectionPoints[intersectionKey];
 
       n.subVectors(p2, p1);
 
@@ -236,19 +236,15 @@ window.InteractablePlane.prototype = {
 
       // what happens when this combines with movement constraints?
       // todo - check y
-      var intersectionOffset = ns[maxi].multiplyScalar(zs[maxi] / ns[maxi].z);
 
+      // lol jk: we were never intersecting. rly.
+      // todo: this may not be valid to do, but we assume that nothing is intersecting
       for ( var intersectionKey in this.moveProximity.intersectionPoints ) {
         if( !this.moveProximity.intersectionPoints.hasOwnProperty(intersectionKey) ) continue;
-
-        this.moveProximity.intersectionPoints[intersectionKey].add(intersectionOffset);
-
+        delete this.moveProximity.intersectionPoints[intersectionKey];
       }
 
       newPosition.z += zs[maxi];
-
-      //console.assert( zs[maxi] == intersectionOffset.z);
-
     }
 
     return newPosition
