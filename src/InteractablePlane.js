@@ -117,7 +117,6 @@ window.InteractablePlane.prototype = {
 
     this.touch(function(){
       if (!this.interactable) return;
-
       this.highlight(true);
     }.bind(this));
 
@@ -210,9 +209,9 @@ window.InteractablePlane.prototype = {
 
       // Don't move farther than bone end
       if ( z > 0 ) {
-        z = Math.min(z, p2.z - intersectionPoint.z);
+        z = Math.min(z, p2.z - intersectionPoint.z) + 1e-8;
       } else {
-        z = Math.max(z, p1.z - intersectionPoint.z);
+        z = Math.max(z, p1.z - intersectionPoint.z) - 1e-8;
       }
 
       zs.push(z);
@@ -239,6 +238,7 @@ window.InteractablePlane.prototype = {
 
       // lol jk: we were never intersecting. rly.
       // todo: this may not be valid to do, but we assume that nothing is intersecting
+      // check multiple hands, etc.
       for ( var intersectionKey in this.moveProximity.intersectionPoints ) {
         if( !this.moveProximity.intersectionPoints.hasOwnProperty(intersectionKey) ) continue;
         delete this.moveProximity.intersectionPoints[intersectionKey];
@@ -490,12 +490,6 @@ window.InteractablePlane.prototype = {
 
       this.intersections[key] = intersectionPoint.clone().sub(this.mesh.position);
 
-      if (!this.touched) {
-        this.touched = true;
-//        console.log('touch', this.mesh.name);
-        this.emit('touch', this);
-      }
-
     }.bind(this) );
 
     proximity.out( function(hand, intersectionPoint, key, index){
@@ -511,13 +505,6 @@ window.InteractablePlane.prototype = {
           break;
         }
 
-      }
-
-      // not sure why, but sometimes getting multiple 0 proximity release events
-      if (proximity.intersectionCount() == 0 && this.touched) {
-        this.touched = false;
-//        console.log('release', this.mesh.name, proximity.intersectionCount());
-        this.emit('release', this);
       }
 
     }.bind(this) );
@@ -620,7 +607,25 @@ window.InteractablePlane.prototype = {
 
     if ( moveX || moveY || moveZ ) this.emit( 'travel', this, this.mesh );
 
+    this.emitTouchEvents(); // This happens after getPosition has a chance to mutate intersectionPoints.
     if (this.options.hoverBounds) this.emitHoverEvents();
+  },
+
+  emitTouchEvents: function(){
+
+    var intersectionCount = this.moveProximity.intersectionCount();
+
+    if (intersectionCount > 0 && !this.touched) {
+      this.touched = true;
+      this.emit('touch', this);
+    }
+
+    // not sure why, but sometimes getting multiple 0 proximity release events
+    if (intersectionCount === 0 && this.touched) {
+      this.touched = false;
+      this.emit('release', this);
+    }
+
   },
 
   // Takes the previousOverlap calculated earlier in this frame.

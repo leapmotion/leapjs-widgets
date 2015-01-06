@@ -204,7 +204,7 @@ Leap.plugin('proximity', function(scope){
 
         intersectionPoint = mesh.intersectedByLine(line[0], line[1], worldPosition);
 
-        var lastIntersectionPoint = this.possibleIntersectionPoints[key];
+        var possibleIntersectionPoint = this.possibleIntersectionPoints[key]; // a somewhat terrible name indicating a point on the plane outside of the plane segment.
 
         // handle incoming fast bone
         // 1: store lastIntersectionPoint at all times
@@ -216,7 +216,10 @@ Leap.plugin('proximity', function(scope){
         // In that case, the foremost line should push the image, but what happens here and in InteractablePlane#getPosition
         // is the lines are averaged and then move the image
         // InteractablePlane should be aware of this adjustment (perhaps doing so itself)
-        if ( this.states[key] !== 'in' && intersectionPoint && lastIntersectionPoint ){
+        // This is somewhat edgy (no pun intended):
+        // we overwrite lastIntersection point to be on the edge. although there was never actually a frame emitted
+        // with it as an intersection point.
+        if ( this.states[key] !== 'in' && intersectionPoint && possibleIntersectionPoint ){
 
           // check all four edges,
           // take the one that actually has a cross
@@ -233,7 +236,7 @@ Leap.plugin('proximity', function(scope){
             var point = intersectionPointBetweenLines(
               corners[j],
               corners[(j+1) % 4],
-              lastIntersectionPoint,
+              possibleIntersectionPoint,
               intersectionPoint
             );
 
@@ -244,7 +247,7 @@ Leap.plugin('proximity', function(scope){
             //console.assert(!isNaN(point.y));
             //console.assert(!isNaN(point.z));
 
-            var lengthSq = (new THREE.Vector3).subVectors(point, lastIntersectionPoint).lengthSq();
+            var lengthSq = (new THREE.Vector3).subVectors(point, possibleIntersectionPoint).lengthSq();
 
 //            console.log('edge #:', i, 'line #:', j, "distance:", Math.sqrt(lengthSq) );
 
@@ -252,14 +255,6 @@ Leap.plugin('proximity', function(scope){
               minLenSq = lengthSq;
               closestEdgeIntersectionPoint = point;
             }
-
-          }
-
-          if (closestEdgeIntersectionPoint) {
-
-            //console.log('edge intersection', closestEdgeIntersectionPoint, "between", intersectionPoint, "and", lastIntersectionPoint);
-
-            intersectionPoint = closestEdgeIntersectionPoint;
 
           }
 
@@ -278,6 +273,15 @@ Leap.plugin('proximity', function(scope){
         }
 
         if (intersectionPoint){
+
+          if (closestEdgeIntersectionPoint) {
+
+            //console.log('edge intersection', closestEdgeIntersectionPoint, "between", intersectionPoint, "and", lastIntersectionPoint);
+
+            // actually becomes this.lastIntersectionPoints[key]:
+            this.intersectionPoints[key] = closestEdgeIntersectionPoint;
+
+          }
 
           this.lastIntersectionPoints[key] = this.intersectionPoints[key];
           this.intersectionPoints[key] = intersectionPoint;
