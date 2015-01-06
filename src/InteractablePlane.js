@@ -208,10 +208,19 @@ window.InteractablePlane.prototype = {
       z = n.z / n.x * delta.x * -1;
 
       // Don't move farther than bone end
+      // note: there's got to be a better way of doing this :-/
       if ( z > 0 ) {
-        z = Math.min(z, p2.z - intersectionPoint.z) + 1e-8;
+        if (p2.z > p1.z) {
+          z = Math.min(z, p1.z - intersectionPoint.z) + 1e-8;
+        } else {
+          z = Math.min(z, p2.z - intersectionPoint.z) + 1e-8;
+        }
       } else {
-        z = Math.max(z, p1.z - intersectionPoint.z) - 1e-8;
+        if (p2.z > p1.z) {
+          z = Math.max(z, p1.z - intersectionPoint.z) - 1e-8;
+        } else {
+          z = Math.max(z, p2.z - intersectionPoint.z) - 1e-8;
+        }
       }
 
       zs.push(z);
