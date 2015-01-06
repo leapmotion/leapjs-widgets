@@ -191,7 +191,7 @@ window.InteractablePlane.prototype = {
       ns.push( n.clone() );
 
       var delta = this.moveProximity.positionChange(intersectionKey);
-      if ( !delta || ( delta.x === 0 && delta.y === 0 && delta.z === 0) ) continue;
+      if ( !delta || ( Math.abs(delta.x) < 1e-8 && Math.abs(delta.y) < 1e-8 && Math.abs(delta.z) < 1e-8 ) ) continue;
 
       // todo - "play" factor? Allow a smidgen of xy and maybe some rotation at strong z angles, indicating bend
 
@@ -211,9 +211,9 @@ window.InteractablePlane.prototype = {
       // note: there's got to be a better way of doing this :-/
       if ( z > 0 ) {
         if (p2.z > p1.z) {
-          z = Math.min(z, p1.z - intersectionPoint.z) + 1e-8;
-        } else {
           z = Math.min(z, p2.z - intersectionPoint.z) + 1e-8;
+        } else {
+          z = Math.min(z, p1.z - intersectionPoint.z) + 1e-8;
         }
       } else {
         if (p2.z > p1.z) {
@@ -245,12 +245,14 @@ window.InteractablePlane.prototype = {
       // what happens when this combines with movement constraints?
       // todo - check y
 
-      // lol jk: we were never intersecting. rly.
-      // todo: this may not be valid to do, but we assume that nothing is intersecting
-      // check multiple hands, etc.
+      i = 0;
       for ( var intersectionKey in this.moveProximity.intersectionPoints ) {
         if( !this.moveProximity.intersectionPoints.hasOwnProperty(intersectionKey) ) continue;
-        delete this.moveProximity.intersectionPoints[intersectionKey];
+
+        var intersectionOffset = ns[i].multiplyScalar(zs[maxi] / ns[i].z);
+
+        this.moveProximity.intersectionPoints[intersectionKey].add(intersectionOffset);
+        i++;
       }
 
       newPosition.z += zs[maxi];

@@ -54,8 +54,7 @@
       targetEl: document.body,
       jointColor: new THREE.Color(0xffffff),
       rendererOps: {antialias: true}
-    })
-    .use('proximity');
+    });
 
 
   // Set up scene
@@ -129,21 +128,10 @@
 
   document.addEventListener('keydown', function (e) {
     console.log('keyDown');
-//    if (!window.currentTest) {
-//      // advance to next test
-//      var test = window.testNames[window.lastTestIndex+1];
-//      if (!test) {
-//        console.log('all tests run');
-//        return
-//      }
-//      window.run(test);
-//      return
-//    }
     var step = tests[currentTest][currentTestStep];
     if (!step) return;
     step();
     currentTestStep++;
-//    window.currentTest = null;
   });
 
   var v1 = new THREE.Vector3(0,   0.1,-0.15);
@@ -241,7 +229,7 @@
     },
     function(){
       moveLineX(0.04)
-    } ,
+    },
     function(){
       moveLineX(0.01)
     }
@@ -276,6 +264,10 @@
     function(){
       moveLineX(0.04);
       moveLine2X(0.04);
+    },
+    function(){
+      v2.setX(0.1);
+      line.geometry.verticesNeedUpdate = true;
     }
   ];
 
@@ -298,6 +290,22 @@
     }
   ];
 
+  tests.sequentialFrames = [
+    function(){
+      setLineX(-0.025);
+    },
+    function(){
+      console.log('x');
+      var i = 0;
+      Leap.loopController.on('frame', function(){
+        i++;
+        if (i > 100) return;
+        console.log('y');
+        moveLineX(0.0004)
+      })
+    }
+  ]
+
   var testNames = [];
   for (var key in tests){
     if (tests.hasOwnProperty(key)){
@@ -309,7 +317,7 @@
   setLine2X(-0.05, 0.07);
 
 
-  window.run('twoLinesOnEnd');
+  window.run('moveLineInTwice');
 
 
 </script>
