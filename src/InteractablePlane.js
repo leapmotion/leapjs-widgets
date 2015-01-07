@@ -462,18 +462,22 @@ window.InteractablePlane.prototype = {
 
     // for every 2 index, we want to add (4 - 2).  That will equal the boneMesh index.
     // not sure if there is a clever formula for the following array:
-    var indexToBoneMeshIndex = [0,1,2,3, 0,1,2,3, 0,1,2,3, 0,1,2,3, 0,1,2,3];
+    var indexToBoneMeshIndex = [
+      [0,5],[0,3],[0,1],
+      [1,7],[1,5],[1,3],[1,1],
+      [2,7],[2,5],[2,3],[2,1],
+      [3,7],[3,5],[3,3],[3,1],
+      [4,7],[4,5],[4,3],[4,1]
+    ];
 
     var setBoneMeshColor = function(hand, index, color){
 
       // In `index / 2`, `2` is the number of joints per hand we're looking at.
-      var meshes = hand.fingers[ Math.floor(index / 4) ].data('boneMeshes');
+      if (!hand.data('handMesh')) return;
+      var meshes = hand.data('handMesh').fingerMeshes;
+      var x = indexToBoneMeshIndex[index];
 
-      if (!meshes) return;
-
-      meshes[
-        indexToBoneMeshIndex[index]
-      ].material.color.setHex(color)
+      meshes[x[0]][x[1]].material.color.setHex(color)
 
     };
 
@@ -494,7 +498,7 @@ window.InteractablePlane.prototype = {
       // This doesn't allow intersections to count if I'm already pinching
       // So if they want to move after a pinch, they have to take hand out of picture and re-place.
       if (hand.data('resizing')) return;
-      setBoneMeshColor(hand, index, 0xffffff);
+      setBoneMeshColor(hand, index, 0x00ff00);
 
       this.intersections[key] = intersectionPoint.clone().sub(this.mesh.position);
 
