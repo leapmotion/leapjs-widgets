@@ -165,16 +165,6 @@ window.InteractablePlane.prototype = {
     var newPosition = (position || new THREE.Vector3).set(0,0,0);
     var n = new THREE.Vector3;
 
-    // todo:
-    // if two conflicting Z directions... take the part that works with both?
-    // ... take the strongest, (which will be the one that moves the least?)
-    // ... z strength is the complement of z distance
-    // ... only matters when comparing two things of strength infinity
-    // ... first, catch a test that case (if z1 sign != z2 sign, debugger)
-    // find the point where two lines cross, that is where the plane should z
-    // that is they solve for the same point.
-    // if multiple agreeing Z directions.. take the largest
-
     // todo: factor back in Y movement and officially scrap this.intersections
 
     var i = 0, ns = [], z, p1, p2, intersectionPoint, maxZ = 0, minZ = 0;
@@ -195,13 +185,6 @@ window.InteractablePlane.prototype = {
       // ^^ small (e-9) values seem to get introduced sometimes, perhaps from the intersectionOffset.
 
       // todo - "play" factor? Allow a smidgen of xy and maybe some rotation at strong z angles, indicating bend
-
-      // only x and z
-      // var scale = delta.x / n.x;
-      // sumDelta = n.z * scale
-      // will work for movement to the right right, but not up
-      // let's try
-      // for y - maybe take max of two
 
       // y = mx + b
       // m = rise/run = n.x / n.z
@@ -253,7 +236,6 @@ window.InteractablePlane.prototype = {
     // add the max positive to the max negative
     // this means that equals will be near 0
     // but unlike average, a small negative won't halve the positive :-{
-    // TODO: this appears jumpy still sometimes.
     z = maxZ + minZ;
 
     newPosition.copy(this.mesh.position);
