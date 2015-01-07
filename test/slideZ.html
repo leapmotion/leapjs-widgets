@@ -71,7 +71,7 @@
 
 
   var planeGeo = new THREE.PlaneGeometry(0.1, 0.2);
-//  var planeGeo = new THREE.CircleGeometry(0.1);
+//  var planeGeo = new THREE.CircleGeometry(0.1, 32);
   var material = new THREE.MeshPhongMaterial({side: THREE.DoubleSide, color: 0xff0000});
   var planeMesh = new THREE.Mesh(planeGeo, material);
   planeMesh.position.setX(0.05);
@@ -82,6 +82,7 @@
   var base = new THREE.Mesh(new THREE.BoxGeometry(0.1, longThrow, longThrow), new THREE.MeshPhongMaterial({color: 0x222222}));
   base.position.set(0.05, 0.05, -0.1);
 
+  // (Skip this positioning for circlegeo)
   planeMesh.position.set(
     0,
     planeMesh.geometry.parameters.height / 2 - longThrow / 2,
