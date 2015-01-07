@@ -207,12 +207,16 @@ window.InteractablePlane.prototype = {
       // m = rise/run = n.x / n.z
       // z = n.z / n.x * delta.x
       z = 0;
-      if (n.x !==0) z += n.z / n.x * delta.x * -1;
-      if (n.y !==0) z += n.z / n.y * delta.y * -1;
+      if (n.x !==0 && Math.abs(n.z / n.x) < 10 ) z += n.z / n.x * delta.x * -1;
+      if (n.y !==0 && Math.abs(n.z / n.y) < 10 ) z += n.z / n.y * delta.y * -1;
+      //if ( !(Math.abs(n.z / n.y) < 10) ) {
+      //  console.log('slope too slight', n.z / n.y);
+      //}
+
 
       // add to that: y
       // for edge cases on the x edge, there will naturally be no delta y, yay.
-      // - if the previous point is projected horizonally
+      // - if the previous point is projected horizontally
       // - but that's probably not it - instead, it's projected directly between two points
 
       // for edge conditions:
