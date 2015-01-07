@@ -126,6 +126,10 @@ Leap.plugin('proximity', function(scope){
     options || (options = {});
     this.options = options;
 
+    // This is to be used when the object is mobile on the XY plane, meaning that one wouldn't usually expect this to be let go
+    // Todo - this could be refactored with something smarter - more constraint-aware.
+    this.options.xyRetain !== undefined  || (this.options.xyRetain = true);
+
     this.mesh = mesh;
     this.handPoints = handPoints;
 
@@ -267,7 +271,10 @@ Leap.plugin('proximity', function(scope){
         // And the new one is valid in z but off in x and y,
         // don't emit an out event.
         // This allows high-speed motions out.
-        if ( !intersectionPoint && this.intersectionPoints[key] && mesh.intersectionPoint ) {
+        // when there's one bone being dragged out
+        // and there's no complimenting z motion, this shouldn't fire pretty much..
+        // we provide the xyRetain option as a quick fix to disable this feature
+        if ( this.options.xyRetain && !intersectionPoint && this.intersectionPoints[key] && mesh.intersectionPoint ) {
 
           //console.log('found newly lost intersection point');
           intersectionPoint = mesh.intersectionPoint
@@ -299,7 +306,6 @@ Leap.plugin('proximity', function(scope){
 
           this.possibleIntersectionPoints[key] = mesh.intersectionPoint; // mesh.intersectionPoint may be on plane, but not segment.
 
-
         } else {
 
           delete this.possibleIntersectionPoints[key];
@@ -309,7 +315,7 @@ Leap.plugin('proximity', function(scope){
         state = intersectionPoint ? 'in' : 'out';
 
         if ( (state == 'in' && this.states[key] !== 'in') || (state == 'out' && this.states[key] === 'in')){ // this logic prevents initial `out` events.
-          this.emit(state, hand, intersectionPoint, key, i); // todo - could include intersection displacement vector here (!)
+          this.emit(state, hand, intersectionPoint, key, i);
           this.states[key] = state;
         }
 

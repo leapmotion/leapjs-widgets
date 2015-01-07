@@ -166,6 +166,8 @@ window.InteractablePlane.prototype = {
     var n = new THREE.Vector3;
 
     // todo: factor back in Y movement and officially scrap this.intersections
+    // this may need a proper place (perhaps with getters and setters on moveX and moveY)
+    this.moveProximity.options.xyRetain = false;
 
     var i = 0, ns = [], z, p1, p2, intersectionPoint, maxZ = 0, minZ = 0;
 
