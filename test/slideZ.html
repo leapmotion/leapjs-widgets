@@ -71,6 +71,7 @@
 
 
   var planeGeo = new THREE.PlaneGeometry(0.1, 0.2);
+//  var planeGeo = new THREE.CircleGeometry(0.1);
   var material = new THREE.MeshPhongMaterial({side: THREE.DoubleSide, color: 0xff0000});
   var planeMesh = new THREE.Mesh(planeGeo, material);
   planeMesh.position.setX(0.05);
@@ -92,13 +93,6 @@
 
   var plane = new InteractablePlane(planeMesh, Leap.loopController, {moveX: true, moveY: true});
 
-  plane.moveProximity.handPoints = function(){
-    return [
-      [v1, v2],
-      [v3, v4]
-    ]
-  };
-
 
   document.getElementById('view-source').href = "view-source:" + window.location.href;
   document.getElementById('view-source').target = "_blank";
@@ -115,6 +109,14 @@
   window.currentTestStep = 0;
   window.lastTestIndex = null;
   window.run = function (testName) {
+
+    plane.moveProximity.handPoints = function(hand){
+      return [
+        [v1, v2],
+        [v3, v4]
+      ]
+    };
+
     window.lastTestIndex = window.testNames.indexOf(testName);
     clear();
     print('running ' + testName);
@@ -127,6 +129,7 @@
   };
 
   document.addEventListener('keydown', function (e) {
+    if (!currentTest) return;
     console.log('keyDown');
     var step = tests[currentTest][currentTestStep];
     if (!step) return;
@@ -301,6 +304,8 @@
   tests.sequentialFrames = [
     function(){
       setLineX(-0.025);
+      v1.y += 0.04;
+      line.geometry.verticesNeedUpdate = true;
     },
     function(){
       console.log('x');
@@ -347,7 +352,7 @@
   setLine2X(-0.05, 0.07);
 
 
-  window.run('diagonalMotion');
+//  window.run('sequentialFrames');
 
 
 </script>

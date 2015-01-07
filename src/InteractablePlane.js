@@ -177,7 +177,7 @@ window.InteractablePlane.prototype = {
 
     // todo: factor back in Y movement and officially scrap this.intersections
 
-    var zs = [], maxi, i = 0, ns = [], z, p1, p2, intersectionPoint;
+    var i = 0, ns = [], z, p1, p2, intersectionPoint, maxZ = 0, minZ = 0;
 
     for ( var intersectionKey in this.moveProximity.intersectionPoints ) {
       if( !this.moveProximity.intersectionPoints.hasOwnProperty(intersectionKey) ) continue;
@@ -192,6 +192,7 @@ window.InteractablePlane.prototype = {
 
       var delta = this.moveProximity.positionChange(intersectionKey);
       if ( !delta || ( Math.abs(delta.x) < 1e-8 && Math.abs(delta.y) < 1e-8 && Math.abs(delta.z) < 1e-8 ) ) continue;
+      // ^^ small (e-9) values seem to get introduced sometimes, perhaps from the intersectionOffset.
 
       // todo - "play" factor? Allow a smidgen of xy and maybe some rotation at strong z angles, indicating bend
 
@@ -230,48 +231,43 @@ window.InteractablePlane.prototype = {
         } else {
           z = Math.min(z, p1.z - intersectionPoint.z) + 1e-8;
         }
+
+        if (z > maxZ) maxZ = z;
       } else {
         if (p2.z > p1.z) {
           z = Math.max(z, p1.z - intersectionPoint.z) - 1e-8;
         } else {
           z = Math.max(z, p2.z - intersectionPoint.z) - 1e-8;
         }
-      }
 
-      zs.push(z);
-
-      // find the bone which causes the most movement.
-      if ( maxi === undefined ){
-        maxi = 0;
-      } else {
-        if (zs[i] * zs[maxi] < 0) debugger; // unsupported conflicting directions
-
-        if (zs[i] > 0 && zs[i] > zs[maxi]) maxi = i;
-        if (zs[i] < 0 && zs[i] < zs[maxi]) maxi = i;
+        if (z < minZ) minZ = z;
       }
 
       i++;
     }
 
+    // add the max positive to the max negative
+    // this means that equals will be near 0
+    // but unlike average, a small negative won't halve the positive :-{
+    // TODO: this appears jumpy still sometimes.
+    z = maxZ + minZ;
+
     newPosition.copy(this.mesh.position);
 
-    if ( maxi !== undefined ){
 
-      // what happens when this combines with movement constraints?
-      // todo - check y
+    // what happens when this combines with movement constraints?
 
-      i = 0;
-      for ( var intersectionKey in this.moveProximity.intersectionPoints ) {
-        if( !this.moveProximity.intersectionPoints.hasOwnProperty(intersectionKey) ) continue;
+    i = 0;
+    for ( var intersectionKey in this.moveProximity.intersectionPoints ) {
+      if( !this.moveProximity.intersectionPoints.hasOwnProperty(intersectionKey) ) continue;
 
-        var intersectionOffset = ns[i].multiplyScalar(zs[maxi] / ns[i].z);
+      var intersectionOffset = ns[i].multiplyScalar(z / ns[i].z);
 
-        this.moveProximity.intersectionPoints[intersectionKey].add(intersectionOffset);
-        i++;
-      }
-
-      newPosition.z += zs[maxi];
+      this.moveProximity.intersectionPoints[intersectionKey].add(intersectionOffset);
+      i++;
     }
+
+    newPosition.z += z;
 
     return newPosition
   },
