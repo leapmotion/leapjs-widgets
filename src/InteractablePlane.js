@@ -171,11 +171,13 @@ window.InteractablePlane.prototype = {
     var newPosition = (position || new THREE.Vector3).set(0,0,0);
     var n = new THREE.Vector3;
 
-    // todo: factor back in Y movement and officially scrap this.intersections
+    // todo: factor back in XY movement and officially scrap this.intersections
     // this may need a proper place (perhaps with getters and setters on moveX and moveY)
     this.moveProximity.options.xyRetain = false;
 
-    var i = 0, ns = [], z, p1, p2, intersectionPoint, maxZ = 0, minZ = 0;
+    var sumZ = 0;
+
+    var i = 0, ns = [], z = 0, p1, p2, intersectionPoint;
 
     for ( var intersectionKey in this.moveProximity.intersectionPoints ) {
       if( !this.moveProximity.intersectionPoints.hasOwnProperty(intersectionKey) ) continue;
@@ -198,53 +200,31 @@ window.InteractablePlane.prototype = {
       // m = rise/run = n.x / n.z
       // z = n.z / n.x * delta.x
       z = 0;
-      //if ( !(Math.abs(n.z / n.y) < 10) ) {
-      //  console.log('slope too slight', n.z / n.y);
       if (n.x !==0 && Math.abs(n.z / n.x) < this.options.minSlideAngle ) z += n.z / n.x * delta.x * -1;
       if (n.y !==0 && Math.abs(n.z / n.y) < this.options.minSlideAngle ) z += n.z / n.y * delta.y * -1;
-      //}
-
-
-      // add to that: y
-      // for edge cases on the x edge, there will naturally be no delta y, yay.
-      // - if the previous point is projected horizontally
-      // - but that's probably not it - instead, it's projected directly between two points
-
-      // for edge conditions:
-      // the above only looks at z from x, which happens to work due to the geo arrangement of our tests
-      // We also need to look at y
-      // and actually rotate the line vector be be square to the edge.
-      // and then always compare against, say, its x dimension.
-      // to work with squares, circles, etc.
-      // we only care about delta in the normal, and line slope in the normal.
 
       // Don't move farther than bone end
-      // note: there's got to be a better way of doing this :-/
+      // note: there's got to be a way to clean this up a little
       if ( z > 0 ) {
         if (p2.z > p1.z) {
           z = Math.min(z, p2.z - intersectionPoint.z) + 1e-8;
         } else {
           z = Math.min(z, p1.z - intersectionPoint.z) + 1e-8;
         }
-
-        if (z > maxZ) maxZ = z;
       } else {
         if (p2.z > p1.z) {
           z = Math.max(z, p1.z - intersectionPoint.z) - 1e-8;
         } else {
           z = Math.max(z, p2.z - intersectionPoint.z) - 1e-8;
         }
-
-        if (z < minZ) minZ = z;
       }
+      sumZ += z;
 
       i++;
     }
 
-    // add the max positive to the max negative
-    // this means that equals will be near 0
-    // but unlike average, a small negative won't halve the positive :-{
-    z = maxZ + minZ;
+    // average the inputs
+    if (i > 0) z = sumZ / i;
 
     newPosition.copy(this.mesh.position);
 
