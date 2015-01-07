@@ -1,0 +1,374 @@
+<html>
+<head>
+
+  <script src="//cdnjs.cloudflare.com/ajax/libs/three.js/r69/three.js"></script>
+  <script src="//js.leapmotion.com/leap-0.6.4.js"></script>
+  <script src="../examples/js/leap-plugins-0.1.11pre.js"></script>
+
+  <script src="../build/leap-widgets-0.1.0.js"></script>
+
+  <script src="../examples/js/OrbitControls.js"></script>
+  <style>
+    body {
+      margin: 0;
+    }
+    canvas.leap-boneHAnd{
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+    #view-source {
+      position: absolute;
+      top: 0;
+      right: 0;
+      margin: 10px;
+      z-index: 10;
+    }
+  </style>
+
+</head>
+<body>
+
+<a id="view-source" href="#">View Source</a>
+
+<p>
+  Insert exactly one hand to run loop. Type `moveLineX(0.001)` in to console to experiment.
+</p>
+<p id="out">
+
+</p>
+
+</body>
+
+<script>
+
+  // Set up plugins
+
+  Leap.loop({background: true})
+    .use('transform', {
+      vr: 'desktop' // Switch to meters.
+    })
+    .use('boneHand', {
+      targetEl: document.body,
+      jointColor: new THREE.Color(0xffffff),
+      rendererOps: {antialias: true}
+    });
+
+
+  // Set up scene
+
+  var scene = Leap.loopController.plugins.boneHand.scene;
+  var camera = Leap.loopController.plugins.boneHand.camera;
+  var renderer = Leap.loopController.plugins.boneHand.renderer;
+  camera.position.set( 0, 0.3, 0.6);
+
+  var controls = new THREE.OrbitControls( camera, renderer.domElement );
+
+  var axisHelper = new THREE.AxisHelper( 0.1 );
+  scene.add( axisHelper );
+
+
+  var planeGeo = new THREE.PlaneGeometry(0.1, 0.2);
+//  var planeGeo = new THREE.CircleGeometry(0.1, 32);
+  var material = new THREE.MeshPhongMaterial({side: THREE.DoubleSide, color: 0xff0000});
+  var planeMesh = new THREE.Mesh(planeGeo, material);
+  planeMesh.position.setX(0.05);
+  planeMesh.position.setY(0.1);
+  planeMesh.name = "planeMesh";
+
+  longThrow = 0.05;
+  var base = new THREE.Mesh(new THREE.BoxGeometry(0.1, longThrow, longThrow), new THREE.MeshPhongMaterial({color: 0x222222}));
+  base.position.set(0.05, 0.05, -0.1);
+
+  // (Skip this positioning for circlegeo)
+  planeMesh.position.set(
+    0,
+    planeMesh.geometry.parameters.height / 2 - longThrow / 2,
+    longThrow / 2 + 0.0002
+  );
+  base.add(planeMesh);
+
+  scene.add(base);
+
+  var plane = new InteractablePlane(planeMesh, Leap.loopController, {moveX: true, moveY: true});
+
+
+  document.getElementById('view-source').href = "view-source:" + window.location.href;
+  document.getElementById('view-source').target = "_blank";
+
+  window.print = function (msg) {
+    document.getElementById('out').innerHTML += "<br/>" + msg;
+  };
+  window.clear = function (msg) {
+    document.getElementById('out').innerHTML = '';
+  };
+
+
+  window.currentTest = null;
+  window.currentTestStep = 0;
+  window.lastTestIndex = null;
+  window.run = function (testName) {
+
+    plane.moveProximity.handPoints = function(hand){
+      return [
+        [v1, v2],
+        [v3, v4]
+      ]
+    };
+
+    window.lastTestIndex = window.testNames.indexOf(testName);
+    clear();
+    print('running ' + testName);
+//    plane.moveProximity.cleanupHandData();
+//    plane.cleanupHandData();
+    tests[testName][0]();
+    window.currentTest = testName;
+    window.currentTestStep = 1;
+    print('press a key');
+  };
+
+  document.addEventListener('keydown', function (e) {
+    if (!currentTest) return;
+    console.log('keyDown');
+    var step = tests[currentTest][currentTestStep];
+    if (!step) return;
+    step();
+    currentTestStep++;
+  });
+
+  var v1 = new THREE.Vector3(0,   0.1,-0.15);
+  var v2 = new THREE.Vector3(0.05,0.1,0.05);
+  var v3 = new THREE.Vector3(0,   0.1,-0.15);
+  var v4 = new THREE.Vector3(0.05,0.1,0.05);
+
+  var lineGeometry = new THREE.Geometry();
+  lineGeometry.vertices.push( v1, v2 );
+
+  var line = new THREE.Line(
+    lineGeometry,
+    new THREE.LineBasicMaterial({ color: 0x0000ff })
+  );
+
+  scene.add(line);
+
+  var lineGeometry2 = new THREE.Geometry();
+  lineGeometry2.vertices.push( v3, v4 );
+
+  var line2 = new THREE.Line(
+    lineGeometry2,
+    new THREE.LineBasicMaterial({ color: 0x00ee33 })
+  );
+
+  scene.add(line2);
+
+  // tests:
+  // move line in √
+  // move line out
+  // move line within
+  // move lines within
+  // two lines moving in opposite ways
+  // past a bone end √
+  // past a bone end and on to another bone
+  // rotation in world space
+  // bone in y √
+  // bone in x and y √
+
+
+  window.moveLineX = function(amt){
+    amt || (amt = 0.01);
+    v1.x += amt;
+    v2.x += amt;
+    line.geometry.verticesNeedUpdate = true
+  }
+
+  window.moveLineXY = function(x,y){
+    v1.x += x;
+    v2.x += x;
+    v1.y += y;
+    v2.y += y;
+    line.geometry.verticesNeedUpdate = true
+  }
+
+  window.moveLine2X = function(amt){
+    amt || (amt = 0.01);
+    v3.x += amt;
+    v4.x += amt;
+    line2.geometry.verticesNeedUpdate = true
+  }
+
+  window.moveLineY = function(amt){
+    amt || (amt = 0.01);
+    v1.y += amt;
+    v2.y += amt;
+    line.geometry.verticesNeedUpdate = true
+  }
+
+  window.setLineX = function(pos, offset){
+    pos || (pos = 0);
+    offset || (offset = 0.05);
+    v1.setX(pos);
+    v2.setX(pos + offset);
+    line.geometry.verticesNeedUpdate = true
+  }
+
+  window.setLine2X = function(pos, offset){
+    pos || (pos = 0);
+    offset || (offset = 0.07);
+    v3.setX(pos);
+    v4.setX(pos + offset);
+    line2.geometry.verticesNeedUpdate = true
+  }
+
+  var tests = {};
+
+  tests.moveLineInOut = [
+    function(){
+      setLineX(-0.05);
+    },
+    function(){
+      moveLineX(0.04)
+    } ,
+    function(){
+      moveLineX(-0.01)
+    }
+  ];
+
+  tests.moveLineInTwice = [
+    function(){
+      setLineX(-0.05);
+    },
+    function(){
+      moveLineX(0.04)
+    },
+    function(){
+      moveLineX(0.01)
+    }
+  ];
+
+  tests.moveLinePastEnd = [
+    function(){
+      setLineX(-0.05);
+    },
+    function(){
+      moveLineX(0.08)
+    }
+  ];
+
+  tests.moveLineInSlopedForwards = [
+    function(){
+      setLineX(-0.01, -0.05);
+    },
+    function(){
+      moveLineX(0.04)
+    },
+    function(){
+      moveLineX(0.04)
+    }
+  ];
+
+  tests.twoLinesDissimilarSlopes = [
+    function(){
+      setLineX(-0.05, 0.05);
+      setLine2X(-0.05, 0.07);
+    },
+    function(){
+      moveLineX(0.04);
+      moveLine2X(0.04);
+    },
+    function(){
+      v2.setX(0.1);
+      line.geometry.verticesNeedUpdate = true;
+    }
+  ];
+
+  tests.twoLinesOnEnd = [
+    function(){
+      v1.set(0,  0.1, -0.05);
+      v2.set(-0.01, 0.1, -0.09);
+      v3.copy(v2);
+      v4.set(-0.03, 0.1, -0.15);
+      line.geometry.verticesNeedUpdate = true;
+      line2.geometry.verticesNeedUpdate = true;
+    },
+    function(){
+      moveLineX(0.02);
+      moveLine2X(0.02);
+    },
+    function(){
+      moveLineX(0.01);
+      moveLine2X(0.01);
+    }
+  ];
+
+  tests.sequentialFrames = [
+    function(){
+      setLineX(-0.025);
+      v1.y += 0.04;
+      line.geometry.verticesNeedUpdate = true;
+    },
+    function(){
+      console.log('x');
+      var i = 0;
+      Leap.loopController.on('frame', function(){
+        i++;
+        if (i > 100) return;
+        console.log('y');
+        moveLineX(0.0004)
+      })
+    }
+  ];
+
+  tests.verticalMotion = [
+    function(){
+      v1.set(0.02,0.25,0.05);
+      v2.set(0.04,0.22,-0.15);
+      line.geometry.verticesNeedUpdate = true;
+    },
+    function(){
+      moveLineY(-0.04)
+    }
+  ];
+
+  tests.diagonalMotion = [
+    function(){
+      v1.set(0.02,0.15,0.05);
+      v2.set(0.02,0.12,-0.15);
+      line.geometry.verticesNeedUpdate = true;
+    },
+    function(){
+      moveLineXY(0.005,0.005);
+    }
+  ];
+
+  // Due to proximity's smartness, it tries not to let go of bones. As demonstrated:
+  // highlight should be gone after the test.
+  tests.removeLine = [
+    function(){
+      v1.set(0.02,0.1,0.05);
+      v2.set(0.02,0.1,-0.15);
+      line.geometry.verticesNeedUpdate = true;
+    },
+    function(){
+      moveLineX(-0.05);
+    }
+  ]
+
+  var testNames = [];
+  for (var key in tests){
+    if (tests.hasOwnProperty(key)){
+      testNames.push(key);
+    }
+  }
+
+  setLineX(-0.05, 0.05);
+  setLine2X(-0.05, 0.07);
+
+
+//  window.run('moveLineInOut');
+
+
+</script>
+
+</html>

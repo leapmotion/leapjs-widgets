@@ -12,6 +12,12 @@ window.InteractablePlane = function(planeMesh, controller, options){
   this.options.damping !== undefined   || (this.options.damping = 0.12); // this can be configured through this.highlightMesh
   this.options.hoverBounds !== undefined  || (this.options.hoverBounds = [0, 0.32]);  // react to hover within 3cm.
 
+  // For use with a plane constrained to the z.  This configures the threshold with which a hand can push in the z
+  // By moving with a sloped hand.  The number is the slope of the hand (m = rise/run = x/z or y/z). e.g., 1 = 1/1 = 45°
+  // Turn it up (like to 100) for a more responsive, but jumpy, feel
+  // Turn it down (like to 5) for something more controllable.
+  this.options.minSlideAngle !== undefined  || (this.options.minSlideAngle = 10);  // react to hover within 3cm.
+
   this.mesh = planeMesh;
 
   if (!(controller instanceof Leap.Controller)) {
@@ -40,10 +46,6 @@ window.InteractablePlane = function(planeMesh, controller, options){
   // e.g. plane.constrainMovement({y: function(y){ if (y > 0.04) return 0.04; return y; } });
   // Todo - it would be great to have a "bouncy constraint" option, which would act like the scroll limits on OSX
   this.movementConstraints = {};
-
-  // If this is ever increased above one, that initial finger can not be counted when averaging position
-  // otherwise, it causes jumpyness.
-  this.fingersRequiredForMove = 1;
 
   this.tempVec3 = new THREE.Vector3;
 
@@ -121,7 +123,6 @@ window.InteractablePlane.prototype = {
 
     this.touch(function(){
       if (!this.interactable) return;
-
       this.highlight(true);
     }.bind(this));
 
@@ -167,35 +168,82 @@ window.InteractablePlane.prototype = {
   // Returns the position of the mesh intersected
   // If position is passed in, sets it.
   getPosition: function(position){
-    var newPosition = position || new THREE.Vector3, intersectionCount = 0;
+    var newPosition = (position || new THREE.Vector3).set(0,0,0);
+    var n = new THREE.Vector3;
 
-    for ( var intersectionKey in this.intersections ){
-      if( this.intersections.hasOwnProperty(intersectionKey) ){
+    // todo: factor back in XY movement and officially scrap this.intersections
+    // this may need a proper place (perhaps with getters and setters on moveX and moveY)
+    this.moveProximity.options.xyRetain = false;
 
-        intersectionCount++;
+    var sumZ = 0;
 
-        newPosition.add(
-          this.moveProximity.intersectionPoints[intersectionKey].clone().sub(
-            this.intersections[intersectionKey]
-          )
-        )
+    var i = 0, ns = [], z = 0, p1, p2, intersectionPoint;
 
+    for ( var intersectionKey in this.moveProximity.intersectionPoints ) {
+      if( !this.moveProximity.intersectionPoints.hasOwnProperty(intersectionKey) ) continue;
+
+      p1 = this.moveProximity.intersectingLines[intersectionKey][0]; // line beginning
+      p2 = this.moveProximity.intersectingLines[intersectionKey][1]; // line end
+      intersectionPoint = this.moveProximity.intersectionPoints[intersectionKey];
+
+      n.subVectors(p2, p1);
+
+      ns.push( n.clone() );
+
+      var delta = this.moveProximity.positionChange(intersectionKey);
+      if ( !delta || ( Math.abs(delta.x) < 1e-8 && Math.abs(delta.y) < 1e-8 && Math.abs(delta.z) < 1e-8 ) ) continue;
+      // ^^ small (e-9) values seem to get introduced sometimes, perhaps from the intersectionOffset.
+
+      // todo - "play" factor? Allow a smidgen of xy and maybe some rotation at strong z angles, indicating bend
+
+      // y = mx + b
+      // m = rise/run = n.x / n.z
+      // z = n.z / n.x * delta.x
+      z = 0;
+      if (n.x !==0 && Math.abs(n.z / n.x) < this.options.minSlideAngle ) z += n.z / n.x * delta.x * -1;
+      if (n.y !==0 && Math.abs(n.z / n.y) < this.options.minSlideAngle ) z += n.z / n.y * delta.y * -1;
+
+      // Don't move farther than bone end
+      // note: there's got to be a way to clean this up a little
+      if ( z > 0 ) {
+        if (p2.z > p1.z) {
+          z = Math.min(z, p2.z - intersectionPoint.z) + 1e-8;
+        } else {
+          z = Math.min(z, p1.z - intersectionPoint.z) + 1e-8;
+        }
+      } else {
+        if (p2.z > p1.z) {
+          z = Math.max(z, p1.z - intersectionPoint.z) - 1e-8;
+        } else {
+          z = Math.max(z, p2.z - intersectionPoint.z) - 1e-8;
+        }
       }
+      sumZ += z;
+
+      i++;
     }
 
-    // todo - experiment with spring physics
-    if ( intersectionCount < this.fingersRequiredForMove) {
+    // average the inputs
+    if (i > 0) z = sumZ / i;
 
-      newPosition.copy(this.mesh.position);
+    newPosition.copy(this.mesh.position);
 
-    } else {
 
-      newPosition.divideScalar(intersectionCount);
+    // what happens when this combines with movement constraints?
 
+    i = 0;
+    for ( var intersectionKey in this.moveProximity.intersectionPoints ) {
+      if( !this.moveProximity.intersectionPoints.hasOwnProperty(intersectionKey) ) continue;
+
+      var intersectionOffset = ns[i].multiplyScalar(z / ns[i].z);
+
+      this.moveProximity.intersectionPoints[intersectionKey].add(intersectionOffset);
+      i++;
     }
 
+    newPosition.z += z;
 
-    return newPosition;
+    return newPosition
   },
 
   // Adds a spring
@@ -402,18 +450,22 @@ window.InteractablePlane.prototype = {
 
     // for every 2 index, we want to add (4 - 2).  That will equal the boneMesh index.
     // not sure if there is a clever formula for the following array:
-    var indexToBoneMeshIndex = [0,1,2,3, 0,1,2,3, 0,1,2,3, 0,1,2,3, 0,1,2,3];
+    var indexToBoneMeshIndex = [
+      [0,5],[0,3],[0,1],
+      [1,7],[1,5],[1,3],[1,1],
+      [2,7],[2,5],[2,3],[2,1],
+      [3,7],[3,5],[3,3],[3,1],
+      [4,7],[4,5],[4,3],[4,1]
+    ];
 
     var setBoneMeshColor = function(hand, index, color){
 
       // In `index / 2`, `2` is the number of joints per hand we're looking at.
-      var meshes = hand.fingers[ Math.floor(index / 4) ].data('boneMeshes');
+      if (!hand.data('handMesh')) return;
+      var meshes = hand.data('handMesh').fingerMeshes;
+      var x = indexToBoneMeshIndex[index];
 
-      if (!meshes) return;
-
-      meshes[
-        indexToBoneMeshIndex[index]
-      ].material.color.setHex(color)
+      meshes[x[0]][x[1]].material.color.setHex(color)
 
     };
 
@@ -422,7 +474,7 @@ window.InteractablePlane.prototype = {
     // todo - rename to something that's not a mozilla method
     var proximity = this.moveProximity = this.controller.watch(
       this.mesh,
-      this.interactiveEndBones
+      this.interactiveBones
     );
 
     // this ties InteractablePlane to boneHand plugin - probably should have callbacks pushed out to scene.
@@ -434,15 +486,9 @@ window.InteractablePlane.prototype = {
       // This doesn't allow intersections to count if I'm already pinching
       // So if they want to move after a pinch, they have to take hand out of picture and re-place.
       if (hand.data('resizing')) return;
-      setBoneMeshColor(hand, index, 0xffffff);
+      setBoneMeshColor(hand, index, 0x00ff00);
 
       this.intersections[key] = intersectionPoint.clone().sub(this.mesh.position);
-
-      if (!this.touched) {
-        this.touched = true;
-//        console.log('touch', this.mesh.name);
-        this.emit('touch', this);
-      }
 
     }.bind(this) );
 
@@ -459,13 +505,6 @@ window.InteractablePlane.prototype = {
           break;
         }
 
-      }
-
-      // not sure why, but sometimes getting multiple 0 proximity release events
-      if (proximity.intersectionCount() == 0 && this.touched) {
-        this.touched = false;
-//        console.log('release', this.mesh.name, proximity.intersectionCount());
-        this.emit('release', this);
       }
 
     }.bind(this) );
@@ -566,10 +605,27 @@ window.InteractablePlane.prototype = {
 
     }
 
-    // note - include moveZ here when implemented.
     if ( moveX || moveY || moveZ ) this.emit( 'travel', this, this.mesh );
 
+    this.emitTouchEvents(); // This happens after getPosition has a chance to mutate intersectionPoints.
     if (this.options.hoverBounds) this.emitHoverEvents();
+  },
+
+  emitTouchEvents: function(){
+
+    var intersectionCount = this.moveProximity.intersectionCount();
+
+    if (intersectionCount > 0 && !this.touched) {
+      this.touched = true;
+      this.emit('touch', this);
+    }
+
+    // not sure why, but sometimes getting multiple 0 proximity release events
+    if (intersectionCount === 0 && this.touched) {
+      this.touched = false;
+      this.emit('release', this);
+    }
+
   },
 
   // Takes the previousOverlap calculated earlier in this frame.
@@ -579,6 +635,7 @@ window.InteractablePlane.prototype = {
 
     var overlap, isHovered;
 
+    // "Not optimized: ForInStatement is not fast case"
     for (var key in this.previousOverlap){
 
       overlap = this.previousOverlap[key];
@@ -691,7 +748,8 @@ window.InteractablePlane.prototype = {
   // Order matters for our own use in this class
   // returns a collection of lines to be tested against
   // could be optimized to reuse vectors between frames
-  interactiveEndBones: function(hand){
+  interactiveBones: function(hand){
+
     var out = [], finger;
 
     for (var i = 0; i < 5; i++){
@@ -700,13 +758,17 @@ window.InteractablePlane.prototype = {
       if (i > 0){ // no thumb proximal
         out.push(
           [
-            (new THREE.Vector3).fromArray(finger.proximal.nextJoint),
-            (new THREE.Vector3).fromArray(finger.proximal.prevJoint)
+            (new THREE.Vector3).fromArray(finger.metacarpal.nextJoint),
+            (new THREE.Vector3).fromArray(finger.metacarpal.prevJoint)
           ]
         );
       }
 
       out.push(
+        [
+          (new THREE.Vector3).fromArray(finger.proximal.nextJoint),
+          (new THREE.Vector3).fromArray(finger.proximal.prevJoint)
+        ],
         [
           (new THREE.Vector3).fromArray(finger.medial.nextJoint),
           (new THREE.Vector3).fromArray(finger.medial.prevJoint)
