@@ -223,7 +223,7 @@ Leap.plugin('proximity', function(scope){
         // This is somewhat edgy (no pun intended):
         // we overwrite lastIntersection point to be on the edge. although there was never actually a frame emitted
         // with it as an intersection point.
-        if ( this.states[key] !== 'in' && intersectionPoint && possibleIntersectionPoint ){
+        if ( this.options.xyRetain && this.states[key] !== 'in' && intersectionPoint && possibleIntersectionPoint ){
 
           // check all four edges,
           // take the one that actually has a cross

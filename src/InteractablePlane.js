@@ -12,6 +12,12 @@ window.InteractablePlane = function(planeMesh, controller, options){
   this.options.damping !== undefined   || (this.options.damping = 0.12); // this can be configured through this.highlightMesh
   this.options.hoverBounds !== undefined  || (this.options.hoverBounds = [0, 0.32]);  // react to hover within 3cm.
 
+  // For use with a plane constrained to the z.  This configures the threshold with which a hand can push in the z
+  // By moving with a sloped hand.  The number is the slope of the hand (m = rise/run = x/z or y/z). e.g., 1 = 1/1 = 45°
+  // Turn it up (like to 100) for a more responsive, but jumpy, feel
+  // Turn it down (like to 5) for something more controllable.
+  this.options.minSlideAngle !== undefined  || (this.options.minSlideAngle = 10);  // react to hover within 3cm.
+
   this.mesh = planeMesh;
 
   if (!(controller instanceof Leap.Controller)) {
@@ -192,10 +198,10 @@ window.InteractablePlane.prototype = {
       // m = rise/run = n.x / n.z
       // z = n.z / n.x * delta.x
       z = 0;
-      if (n.x !==0 && Math.abs(n.z / n.x) < 10 ) z += n.z / n.x * delta.x * -1;
-      if (n.y !==0 && Math.abs(n.z / n.y) < 10 ) z += n.z / n.y * delta.y * -1;
       //if ( !(Math.abs(n.z / n.y) < 10) ) {
       //  console.log('slope too slight', n.z / n.y);
+      if (n.x !==0 && Math.abs(n.z / n.x) < this.options.minSlideAngle ) z += n.z / n.x * delta.x * -1;
+      if (n.y !==0 && Math.abs(n.z / n.y) < this.options.minSlideAngle ) z += n.z / n.y * delta.y * -1;
       //}
 
 
