@@ -88,6 +88,7 @@ Leap.loopController.on 'frame', (frame)->
 
   # we can use any arbitrary up-vector, as we're only looking for differences (ultimately)
   mesh.matrix.lookAt(mesh.position, temp, up)
+  mesh.matrix.setPosition(mesh.position)
 #  mesh.updateMatrix()
   mesh.matrixWorldNeedsUpdate = true
 
