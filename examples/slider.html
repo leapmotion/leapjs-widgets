@@ -56,13 +56,14 @@ void main() {
 <script type="x-shader/x-fragment" id="fragmentShader">
 varying vec3 vPosition;
 uniform float progress;
+uniform float width;
 
   void main(void)
    {
       gl_FragColor = vec4(
       0.,
       0.0,
-      1. - (vPosition.x + 0.1 - (progress / 10.) ) * 100.,
+      1. - (vPosition.x + (width / 2.) - (progress / 5.) ) * 100.,
       1.0);
    }
 </script>
@@ -95,22 +96,27 @@ uniform float progress;
   scene.add( axisHelper );
 
   var Progress = function(controller){
+    var width = 0.2;
+    var height= 0.1;
+
     this.controller = controller || (Leap.loopController);
 
     this.progress = { type: "f", value: 0.5 }; // 0-1
 
-    this.geo = new THREE.PlaneGeometry(0.2, 0.1);
+    this.geometry = new THREE.PlaneGeometry(width, height);
     this.material = new THREE.ShaderMaterial( {
       shading: THREE.SmoothShading,
       uniforms: {
-        progress: this.progress
+        progress: this.progress,
+        width: { type: "f", value: this.geometry.parameters.width }
       },
       attributes: {},
       vertexShader: document.getElementById( 'vertexShader' ).textContent,
       fragmentShader: document.getElementById( 'fragmentShader' ).textContent
     } );
 
-    this.mesh = new THREE.Mesh(this.geo, this.material);
+
+    this.mesh = new THREE.Mesh(this.geometry, this.material);
 
 
     this.bindLeap();
