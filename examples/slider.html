@@ -1,0 +1,132 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="//cdnjs.cloudflare.com/ajax/libs/three.js/r71/three.js"></script>
+  <script src="//js.leapmotion.com/leap-0.6.4.js"></script>
+  <script src="js/leap-plugins-0.1.11pre.js"></script>
+
+  <script src="../build/leap-widgets-0.1.0.js"></script>
+
+  <script src="js/OrbitControls.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+    }
+    canvas.leap-boneHand{
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    #view-source {
+      position: absolute;
+      top: 0;
+      right: 0;
+      margin: 10px;
+      z-index: 10;
+    }
+  </style>
+
+</head>
+<body>
+
+<script type="x-shader/x-vertex" id="vertexShader">
+
+varying vec3 vPosition;
+
+/**
+ * Multiply each vertex by the
+ * model-view matrix and the
+ * projection matrix (both provided
+ * by Three.js) to get a final
+ * vertex position
+ */
+void main() {
+
+  gl_Position = projectionMatrix *
+                modelViewMatrix *
+                vec4(position,1.0);
+
+  vPosition = position;
+}
+</script>
+<script type="x-shader/x-fragment" id="fragmentShader">
+varying vec3 vPosition;
+uniform float progress;
+
+  void main(void)
+   {
+      gl_FragColor = vec4(
+      0.,
+      0.0,
+      1. - (vPosition.x + 0.1 - (progress / 10.) ) * 100.,
+      1.0);
+   }
+</script>
+
+</body>
+
+<script>
+  'use strict';
+
+  Leap.loop({background: true})
+    .use('transform', {
+      vr: 'desktop' // Switch to meters.
+    })
+    .use('boneHand', {
+      targetEl: document.body,
+      jointColor: new THREE.Color(0xffffff),
+      rendererOps: {antialias: true}
+    })
+    .use('proximity');
+
+
+  var scene = Leap.loopController.plugins.boneHand.scene;
+  var camera = Leap.loopController.plugins.boneHand.camera;
+  var renderer = Leap.loopController.plugins.boneHand.renderer;
+  camera.position.set( 0, 0.3, 0.6 );
+
+  var controls = new THREE.OrbitControls( camera );
+
+  var axisHelper = new THREE.AxisHelper( 0.1 );
+  scene.add( axisHelper );
+
+  var Progress = function(controller){
+    this.controller = controller || (Leap.loopController);
+
+    this.progress = { type: "f", value: 0.5 }; // 0-1
+
+    this.geo = new THREE.PlaneGeometry(0.2, 0.1);
+    this.material = new THREE.ShaderMaterial( {
+      shading: THREE.SmoothShading,
+      uniforms: {
+        progress: this.progress
+      },
+      attributes: {},
+      vertexShader: document.getElementById( 'vertexShader' ).textContent,
+      fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+    } );
+
+    this.mesh = new THREE.Mesh(this.geo, this.material);
+
+
+    this.bindLeap();
+  };
+
+  Progress.prototype = {
+    bindLeap: function(){
+      this.controller.on('hand', function(hand){
+        this.progress.value = hand.palmPosition[0] * 20;
+      }.bind(this));
+    }
+  };
+
+  var progress = new Progress();
+  scene.add(progress.mesh);
+
+</script>
+
+</html>
