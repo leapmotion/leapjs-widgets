@@ -1,0 +1,109 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="//cdnjs.cloudflare.com/ajax/libs/three.js/r69/three.js"></script>
+  <script src="//js.leapmotion.com/leap-0.6.4.js"></script>
+  <script src="js/leap-plugins-0.1.11pre.js"></script>
+
+  <script type="text/javascript" src="js/coffee-script.js"></script>
+
+
+  <style>
+    body {
+      margin: 0;
+    }
+    canvas.leap-boneHand{
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    #view-source {
+      position: absolute;
+      top: 0;
+      right: 0;
+      margin: 10px;
+      z-index: 10;
+    }
+  </style>
+
+</head>
+<body>
+</body>
+
+<script type="application/javascript">
+  'use strict';
+
+  // Set up plugins
+
+  Leap.loop({background: true})
+    .use('transform', {
+      vr: 'desktop' // Switch to meters.
+    })
+    .use('boneHand', {
+      targetEl: document.body,
+      jointColor: new THREE.Color(0xffffff),
+      rendererOps: {antialias: true}
+    })
+
+
+  var scene = Leap.loopController.plugins.boneHand.scene;
+  var camera = Leap.loopController.plugins.boneHand.camera;
+  var renderer = Leap.loopController.plugins.boneHand.renderer;
+  camera.position.set( 0, 0.3, 0.6 );
+
+  var axisHelper = new THREE.AxisHelper( 0.1 );
+  scene.add( axisHelper );
+
+  // Add a plane
+
+  var boxGeo = new THREE.BoxGeometry(0.08, 0.16, 0.1);
+  var material = new THREE.MeshPhongMaterial();
+  var mesh = new THREE.Mesh(boxGeo, material);
+  mesh.matrixAutoUpdate = false; // !
+
+  scene.add(mesh);
+
+</script>
+
+<script type="text/coffeescript">
+
+up = new THREE.Vector3(0,1,0)
+
+Leap.loopController.on 'frame', (frame)->
+  return unless frame.hands.length == 2
+
+  # centerpoint between the hands
+  center = new THREE.Vector3
+  temp = new THREE.Vector3
+  for hand in frame.hands
+    temp.fromArray(hand.palmPosition)
+    center.add(temp)
+
+  center.divideScalar(frame.hands.length)
+
+  mesh.position.copy(center)
+
+  # we can use any arbitrary up-vector, as we're only looking for differences (ultimately)
+  mesh.matrix.lookAt(mesh.position, temp, up)
+#  mesh.updateMatrix()
+  mesh.matrixWorldNeedsUpdate = true
+
+  # 2: use deltas
+
+  # 3: average rotation of hands around axis between hands to alter the up-vector
+
+  # 4: create object field
+
+  # 5: apply to camera, instead of object (make this toggleable)
+
+  # 6: add intertial effects
+
+
+
+
+</script>
+
+</html>
