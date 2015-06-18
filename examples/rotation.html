@@ -66,11 +66,37 @@
 
   scene.add(mesh);
 
+  // Sets this quaternion to be the component of the rotation which took place around a given axis
+  // Takes a normalized Vector3 axis
+  THREE.Quaternion.prototype.rotationAroundAxis = function(axis){
+    // http://stackoverflow.com/questions/3684269/component-of-a-quaternion-rotation-around-an-axis
+    axis.normalize(); // (!)
+
+    // => z2 = (-x1 * x2 - y1 * y2) / z1
+    var orthoVec = new THREE.Vector3(1,1,1);
+    orthoVec.z = (-axis.x * orthoVec.z - axis.y * orthoVec.y) / axis.z;
+    orthoVec.normalize();
+
+    var targetVec = orthoVec.clone();
+
+    this.multiplyVector3(targetVec);
+
+    targetVec.projectOnPlane(axis);
+
+    this.setFromUnitVectors(orthoVec, targetVec);
+  }
+
 </script>
 
 <script type="text/coffeescript">
 
-up = new THREE.Vector3(0,1,0)
+up = new THREE.Vector3(0,Math.sqrt(2),Math.sqrt(2))
+
+# for each hand, hold present and past rotation state
+q1h1 = new THREE.Quaternion
+q2h1 = new THREE.Quaternion
+q1h2 = new THREE.Quaternion
+q2h2 = new THREE.Quaternion
 
 Leap.loopController.on 'frame', (frame)->
   return unless frame.hands.length == 2
@@ -89,10 +115,12 @@ Leap.loopController.on 'frame', (frame)->
   # we can use any arbitrary up-vector, as we're only looking for differences (ultimately)
   mesh.matrix.lookAt(mesh.position, temp, up)
   mesh.matrix.setPosition(mesh.position)
-#  mesh.updateMatrix()
   mesh.matrixWorldNeedsUpdate = true
 
   # 2: use deltas
+
+
+
 
   # 3: average rotation of hands around axis between hands to alter the up-vector
 
