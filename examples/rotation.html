@@ -1,8 +1,9 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <script src="//cdnjs.cloudflare.com/ajax/libs/three.js/r69/three.js"></script>
-  <script src="//js.leapmotion.com/leap-0.6.4.js"></script>
+  <!--<script src="//cdnjs.cloudflare.com/ajax/libs/three.js/r71/three.js"></script>-->
+  <script src="js/three.js"></script>
+  <script type="text/javascript" src="js/leap-0.6.5pre.js"></script>
   <script src="js/leap-plugins-0.1.11pre.js"></script>
 
   <script type="text/javascript" src="js/coffee-script.js"></script>
@@ -38,7 +39,7 @@
 
   // Set up plugins
 
-  Leap.loop({background: true})
+  Leap.loop()
     .use('transform', {
       vr: 'desktop' // Switch to meters.
     })
@@ -46,7 +47,7 @@
       targetEl: document.body,
       jointColor: new THREE.Color(0xffffff),
       rendererOps: {antialias: true}
-    })
+    });
 
 
   var scene = Leap.loopController.plugins.boneHand.scene;
@@ -57,11 +58,10 @@
   var axisHelper = new THREE.AxisHelper( 0.1 );
   scene.add( axisHelper );
 
-  // Add a plane
 
-  var boxGeo = new THREE.BoxGeometry(0.08, 0.16, 0.1);
+  var geo = new THREE.CylinderGeometry(0.04, 0.08, 0.16, 5);
   var material = new THREE.MeshPhongMaterial();
-  var mesh = new THREE.Mesh(boxGeo, material);
+  var mesh = new THREE.Mesh(geo, material);
   mesh.matrixAutoUpdate = false; // !
 
   scene.add(mesh);
@@ -79,7 +79,7 @@
 
     var targetVec = orthoVec.clone();
 
-    this.multiplyVector3(targetVec);
+    targetVec.applyQuaternion(this);
 
     targetVec.projectOnPlane(axis);
 
@@ -90,15 +90,40 @@
 
 <script type="text/coffeescript">
 
+
+# add small rotation on random positive normalized axis
+q = (new THREE.Quaternion).setFromAxisAngle(
+  new THREE.Vector3( (Math.random() * 10 ), Math.random(), 0 ).normalize(),
+  Math.PI / (Math.random() * 1)
+)
+#mesh.quaternion.multiply(q)
+mesh.updateMatrix()
+
+
 up = new THREE.Vector3(0,Math.sqrt(2),Math.sqrt(2))
 
 # for each hand, hold present and past rotation state
-q1h1 = new THREE.Quaternion
-q2h1 = new THREE.Quaternion
+q1h1 = new THREE.Quaternion # 1 most recent
+q2h1 = new THREE.Quaternion # further back in time
+q3h1 = new THREE.Quaternion # delta
+
 q1h2 = new THREE.Quaternion
 q2h2 = new THREE.Quaternion
+q3h2 = new THREE.Quaternion
+
+m1o = null # matrix for object
+m2o = new THREE.Matrix4
+mesh.matrixWorldInverse = new THREE.Matrix4
+
+q1o = null
+q2o = new THREE.Quaternion
+
+qTemp = new THREE.Quaternion
+mTemp = new THREE.Matrix4
+vTemp = new THREE.Vector3
 
 Leap.loopController.on 'frame', (frame)->
+
   return unless frame.hands.length == 2
 
   # centerpoint between the hands
@@ -109,20 +134,62 @@ Leap.loopController.on 'frame', (frame)->
     center.add(temp)
 
   center.divideScalar(frame.hands.length)
-
   mesh.position.copy(center)
 
-  # we can use any arbitrary up-vector, as we're only looking for differences (ultimately)
-  mesh.matrix.lookAt(mesh.position, temp, up)
-  mesh.matrix.setPosition(mesh.position)
-  mesh.matrixWorldNeedsUpdate = true
+
+  axis = (new THREE.Vector3).fromArray(frame.hands[0].palmPosition)
+  vTemp.fromArray(frame.hands[1].palmPosition)
+  axis.sub(vTemp)
 
   # 2: use deltas
 
+  # we can use any arbitrary up-vector, as we're only looking for differences (ultimately)
+  if m1o
+    m2o.copy(m1o)
+    m1o.lookAt(mesh.position, temp, up)
+    q2o.copy(q1o)
+    q1o.setFromRotationMatrix(m1o)
+  else
+    m1o = new THREE.Matrix4
+    m1o.lookAt(mesh.position, temp, up)
+    q1o = new THREE.Quaternion
+    q1o.setFromRotationMatrix(m1o)
+    return
 
+  # rotation since Last Frame
+  # (note, this could alternatively be done with hand.sinceFrame, but that returns a mat3 (and may work on deviceFrames instead?)
+  mTemp.copy(m1o).multiply(m2o.getInverse(m2o.clone()))
+
+  # multiply our offset first (todo: check against matrixWorld)
+  mesh.matrix.multiplyMatrices(mTemp, mesh.matrix.clone())
+
+  mesh.matrixWorldNeedsUpdate = true
+
+
+  # Use pitch of hands (actually, rotation on axis of plane normal to between hands) to alter on between-hands axis.
+
+  q2h1.copy(q1h1);
+  q1h1.setFromRotationMatrix { elements: frame.hands[0].matrix() }
+  q3h1.copy(q1h1).multiply( qTemp.copy(q2h1).inverse() )
+
+  q2h2.copy(q1h2);
+  q1h2.setFromRotationMatrix { elements: frame.hands[1].matrix() }
+
+  # extract existing quaternion, multiply by delta quaternion, put back in to the matrix
+  # for now, we don't restrict to axis, just for fun. (simplifying, and it could actually be nice? probably not nice.)
+  qTemp.setFromRotationMatrix(mesh.matrix);
+
+  q3h1.rotationAroundAxis(axis)
+
+  q3h1.multiply(qTemp);
+  mesh.matrix.makeRotationFromQuaternion(q3h1);
+
+  mesh.matrix.setPosition(mesh.position)
 
 
   # 3: average rotation of hands around axis between hands to alter the up-vector
+
+
 
   # 4: create object field
 
