@@ -12,7 +12,9 @@ See the demos below for how to set this up in a couple of lines.
 ![vrcollage2s](https://cloud.githubusercontent.com/assets/407497/5421708/b2f6a38c-821d-11e4-947e-82f18b3c17b2.gif)
 
 
-Get it from the CDN at [js.leapmotion.com](http://js.leapmotion.com).
+Get it from the [js.leapmotion.com](https://js.leapmotion.com/) CDN at:
+  - `v0.6.4` [js.leapmotion.com/leap-0.6.4.min.js](https://js.leapmotion.com/leap-0.6.4.min.js)
+  - `v1.0.0` [js.leapmotion.com/leap-1.0.0.min.js](https://js.leapmotion.com/leap-1.0.0.min.js)
 
 ## XY Movement - Slide & Scroll
 
